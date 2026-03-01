@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
-import dynamic from "next/dynamic";
+"use client";
 
-export const metadata: Metadata = {
-  title: "PPCL Code Analyzer — FieldKit Pro",
-};
+import dynamic from "next/dynamic";
+import { PaidFeatureGate } from "@/lib/subscription";
 
 const PPCLAnalyzer = dynamic(
   () => import("@/components/tools/PPCLAnalyzer"),
@@ -18,7 +16,9 @@ export default function PPCLAnalyzerPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">PPCL Code Analyzer</h1>
-      <PPCLAnalyzer />
+      <PaidFeatureGate toolName="ppcl-analyzer">
+        <PPCLAnalyzer />
+      </PaidFeatureGate>
     </div>
   );
 }

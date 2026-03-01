@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import SearchableTable from "./SearchableTable";
 import { yaskawaFaults } from "@/lib/data/yaskawa-faults";
 import { yaskawaParameters } from "@/lib/data/yaskawa-parameters";
+import { PaidFeatureGate, useSubscription } from "@/lib/subscription";
 
 type Tab = "faults" | "parameters" | "configs";
 
@@ -118,6 +119,15 @@ const commonConfigs: CommonConfig[] = [
 
 export default function YaskawaDriveTools() {
   const [tab, setTab] = useState<Tab>("faults");
+  const { recordUsage } = useSubscription();
+  const tracked = useRef(false);
+
+  useEffect(() => {
+    if (!tracked.current) {
+      tracked.current = true;
+      recordUsage("yaskawa-faults");
+    }
+  }, [recordUsage]);
 
   return (
     <div className="space-y-6">
@@ -146,24 +156,28 @@ export default function YaskawaDriveTools() {
 
       {/* Fault Codes Tab */}
       {tab === "faults" && (
-        <SearchableTable
-          data={yaskawaFaults}
-          columns={faultColumns}
-          categoryKey="category"
-          categoryLabel="Categories"
-          searchPlaceholder="Search fault codes, names, or descriptions..."
-        />
+        <PaidFeatureGate toolName="yaskawa-faults">
+          <SearchableTable
+            data={yaskawaFaults}
+            columns={faultColumns}
+            categoryKey="category"
+            categoryLabel="Categories"
+            searchPlaceholder="Search fault codes, names, or descriptions..."
+          />
+        </PaidFeatureGate>
       )}
 
       {/* Parameters Tab */}
       {tab === "parameters" && (
-        <SearchableTable
-          data={yaskawaParameters}
-          columns={paramColumns}
-          categoryKey="group"
-          categoryLabel="Groups"
-          searchPlaceholder="Search parameters..."
-        />
+        <PaidFeatureGate toolName="yaskawa-parameters">
+          <SearchableTable
+            data={yaskawaParameters}
+            columns={paramColumns}
+            categoryKey="group"
+            categoryLabel="Groups"
+            searchPlaceholder="Search parameters..."
+          />
+        </PaidFeatureGate>
       )}
 
       {/* Common Configs Tab */}

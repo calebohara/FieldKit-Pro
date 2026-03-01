@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import SearchableTable from "./SearchableTable";
 import { abbFaults } from "@/lib/data/abb-faults";
 import { abbParameters } from "@/lib/data/abb-parameters";
+import { PaidFeatureGate, useSubscription } from "@/lib/subscription";
 
 type Tab = "faults" | "parameters" | "configs";
 
@@ -117,6 +118,15 @@ const commonConfigs: CommonConfig[] = [
 
 export default function ABBDriveTools() {
   const [tab, setTab] = useState<Tab>("faults");
+  const { recordUsage } = useSubscription();
+  const tracked = useRef(false);
+
+  useEffect(() => {
+    if (!tracked.current) {
+      tracked.current = true;
+      recordUsage("abb-faults");
+    }
+  }, [recordUsage]);
 
   return (
     <div className="space-y-6">
@@ -145,24 +155,28 @@ export default function ABBDriveTools() {
 
       {/* Fault Codes Tab */}
       {tab === "faults" && (
-        <SearchableTable
-          data={abbFaults}
-          columns={faultColumns}
-          categoryKey="category"
-          categoryLabel="Categories"
-          searchPlaceholder="Search fault codes, names, or descriptions..."
-        />
+        <PaidFeatureGate toolName="abb-faults">
+          <SearchableTable
+            data={abbFaults}
+            columns={faultColumns}
+            categoryKey="category"
+            categoryLabel="Categories"
+            searchPlaceholder="Search fault codes, names, or descriptions..."
+          />
+        </PaidFeatureGate>
       )}
 
       {/* Parameters Tab */}
       {tab === "parameters" && (
-        <SearchableTable
-          data={abbParameters}
-          columns={paramColumns}
-          categoryKey="group"
-          categoryLabel="Groups"
-          searchPlaceholder="Search parameters..."
-        />
+        <PaidFeatureGate toolName="abb-parameters">
+          <SearchableTable
+            data={abbParameters}
+            columns={paramColumns}
+            categoryKey="group"
+            categoryLabel="Groups"
+            searchPlaceholder="Search parameters..."
+          />
+        </PaidFeatureGate>
       )}
 
       {/* Common Configs Tab */}
