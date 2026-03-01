@@ -9,12 +9,17 @@ const sections = [
   {
     href: "/dashboard/ppcl/reference",
     title: "Command Reference",
-    description: "Searchable reference of all PPCL commands",
+    description: "Searchable reference of all PPCL commands with syntax and examples",
+  },
+  {
+    href: "/dashboard/ppcl/errors",
+    title: "Common Errors",
+    description: "Symptoms, root causes, and fixes for frequent PPCL issues",
   },
   {
     href: "/dashboard/ppcl/analyzer",
     title: "Code Analyzer",
-    description: "Paste PPCL code and get analysis",
+    description: "Paste PPCL code for syntax highlighting and issue detection",
   },
 ];
 
@@ -22,7 +27,7 @@ export default function PPCLPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">PPCL Tools</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {sections.map((section) => (
           <Link
             key={section.href}

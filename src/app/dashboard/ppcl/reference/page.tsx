@@ -1,16 +1,26 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "PPCL Command Reference — FieldKit Pro",
-};
+import SearchableTable from "@/components/tools/SearchableTable";
+import { ppclCommands } from "@/lib/data/ppcl-commands";
+
+const columns = [
+  { key: "command" as const, label: "Command", searchable: true },
+  { key: "syntax" as const, label: "Syntax", searchable: true },
+  { key: "description" as const, label: "Description", searchable: true },
+  { key: "example" as const, label: "Example", searchable: true },
+];
 
 export default function PPCLReferencePage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">PPCL Command Reference</h1>
-      <p className="text-[var(--muted-foreground)]">
-        Searchable command reference coming in v0.2.0.
-      </p>
+      <SearchableTable
+        data={ppclCommands}
+        columns={columns}
+        categoryKey="category"
+        categoryLabel="Categories"
+        searchPlaceholder="Search commands, syntax, or descriptions..."
+      />
     </div>
   );
 }
