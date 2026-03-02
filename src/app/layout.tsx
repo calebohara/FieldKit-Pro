@@ -19,18 +19,34 @@ export const metadata: Metadata = {
     "GA700",
   ],
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "FieldKit Pro — Your Field Engineering Toolkit",
     description:
       "Drive fault codes, PID tuning, PPCL reference — searchable in seconds from your phone. Free to start.",
     type: "website",
     siteName: "FieldKit Pro",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "FieldKit Pro — Field Engineering Toolkit for Controls Engineers",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "FieldKit Pro — Field Engineering Toolkit",
     description:
       "ABB & Yaskawa fault codes, PID loop tuning, PPCL troubleshooting — built for controls engineers.",
+    images: ["/og-image.png"],
   },
   appleWebApp: {
     capable: true,
