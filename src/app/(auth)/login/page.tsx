@@ -36,7 +36,13 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative">
-      <div className="absolute top-4 right-4">
+      <div
+        className="absolute"
+        style={{
+          top: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+          right: "calc(env(safe-area-inset-right, 0px) + 1rem)",
+        }}
+      >
         <ThemeToggle />
       </div>
       <div className="w-full max-w-sm space-y-6">

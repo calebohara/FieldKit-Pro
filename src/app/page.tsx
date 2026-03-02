@@ -64,7 +64,10 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="border-b border-[var(--border)] px-3 sm:px-4 py-3 sm:py-4">
+      <header
+        className="border-b border-[var(--border)] px-3 sm:px-4 py-3 sm:py-4"
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 0px)" }}
+      >
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <span className="text-base sm:text-xl font-bold flex items-center gap-1.5 sm:gap-2 shrink-0">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[var(--primary)] sm:w-[22px] sm:h-[22px]">
