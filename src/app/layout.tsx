@@ -2,10 +2,36 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FieldKit Pro — Field Engineering Toolkit",
+  title: "FieldKit Pro — Field Engineering Toolkit for Controls Engineers",
   description:
-    "PPCL troubleshooting, loop tuning, drive configuration — all the references you need, searchable in seconds.",
+    "Look up ABB & Yaskawa drive fault codes, tune PID loops, and troubleshoot PPCL — all from your phone. Built by a controls engineer, for controls engineers.",
+  keywords: [
+    "HVAC controls",
+    "building automation",
+    "ABB drive fault codes",
+    "Yaskawa drive fault codes",
+    "PID loop tuning",
+    "PPCL programming",
+    "field engineering",
+    "BAS troubleshooting",
+    "ACS580",
+    "GA500",
+    "GA700",
+  ],
   manifest: "/manifest.json",
+  openGraph: {
+    title: "FieldKit Pro — Your Field Engineering Toolkit",
+    description:
+      "Drive fault codes, PID tuning, PPCL reference — searchable in seconds from your phone. Free to start.",
+    type: "website",
+    siteName: "FieldKit Pro",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FieldKit Pro — Field Engineering Toolkit",
+    description:
+      "ABB & Yaskawa fault codes, PID loop tuning, PPCL troubleshooting — built for controls engineers.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
