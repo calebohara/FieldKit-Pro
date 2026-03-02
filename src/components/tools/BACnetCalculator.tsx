@@ -238,7 +238,7 @@ const DECISION_TREE: TreeNode[] = [
 ];
 
 /* ─── tabs ─── */
-const TABS = ["Subnet Calc", "Gateway Check", "VLAN Reference", "Can't Ping?"] as const;
+const TABS = ["Subnet Calc", "Gateway Check", "VLAN Reference", "Can't Ping?", "MSTP"] as const;
 type Tab = (typeof TABS)[number];
 
 /* ─── components ─── */
@@ -596,6 +596,356 @@ function CantPingTab() {
   );
 }
 
+/* ─── MSTP Planner ─── */
+
+const BAUD_RATES = [
+  { baud: 9600, maxCable: "4000 ft (1200m)", maxDevices: 32, notes: "Default for most controllers. Safest for long runs." },
+  { baud: 19200, maxCable: "4000 ft (1200m)", maxDevices: 32, notes: "Good balance of speed and reliability." },
+  { baud: 38400, maxCable: "4000 ft (1200m)", maxDevices: 32, notes: "Common for Tridium, Distech. Reduce cable length if errors occur." },
+  { baud: 76800, maxCable: "2000 ft (600m)", maxDevices: 32, notes: "High speed — shorter cable runs. Less common in BAS." },
+];
+
+const TOKEN_TIMING = [
+  { devices: 5, baud: 38400, maxMaster: 5, tokenRotation: "~50ms", pollRate: "~200ms", notes: "Fast — ideal for small trunks" },
+  { devices: 10, baud: 38400, maxMaster: 10, tokenRotation: "~100ms", pollRate: "~400ms", notes: "Typical VAV trunk" },
+  { devices: 15, baud: 38400, maxMaster: 15, tokenRotation: "~150ms", pollRate: "~600ms", notes: "Getting busy — watch for timeouts" },
+  { devices: 20, baud: 38400, maxMaster: 20, tokenRotation: "~200ms", pollRate: "~800ms", notes: "Near practical limit at 38400" },
+  { devices: 25, baud: 38400, maxMaster: 25, tokenRotation: "~250ms", pollRate: "~1.0s", notes: "May need to split trunk" },
+  { devices: 32, baud: 38400, maxMaster: 32, tokenRotation: "~320ms", pollRate: "~1.3s", notes: "Max spec — expect slow polling" },
+  { devices: 10, baud: 9600, maxMaster: 10, tokenRotation: "~400ms", pollRate: "~1.6s", notes: "Slow — avoid if possible at 9600" },
+  { devices: 10, baud: 76800, maxMaster: 10, tokenRotation: "~50ms", pollRate: "~200ms", notes: "Fast at 76800 — short cables only" },
+];
+
+const COLLISION_CHECKLIST = [
+  { id: "baud", label: "All devices on this trunk are set to the SAME baud rate", detail: "Even one mismatched device will cause constant collisions. Check every device, including routers." },
+  { id: "maxmaster", label: "Max Master is set correctly on ALL master devices", detail: "Max Master must be ≥ the highest MAC address on the trunk. Set it to the exact highest MAC for best performance — don't leave it at the default 127." },
+  { id: "duplicate", label: "No duplicate MAC addresses on the trunk", detail: "Two devices with the same MAC = guaranteed collisions. Use the address planner above to track assignments." },
+  { id: "termination", label: "RS-485 bus is terminated at BOTH ends (and only both ends)", detail: "120Ω termination resistor at each end of the trunk. Missing termination = signal reflections. Extra termination in the middle = signal attenuation." },
+  { id: "polarity", label: "RS-485 wiring polarity is consistent (+ to +, − to −)", detail: "Swapped polarity on even one device will cause it to corrupt the bus. Use a scope or multimeter to verify." },
+  { id: "stub", label: "No long stub/spur wires off the main trunk", detail: "MSTP is a daisy-chain bus, NOT a star topology. Stubs > 6 ft cause reflections. Home-run each device on the trunk in series." },
+  { id: "shield", label: "Shielded cable with shield grounded at ONE end only", detail: "Ground the shield at the controller/router end. Grounding at both ends creates a ground loop that injects noise." },
+  { id: "power", label: "RS-485 bus is not run alongside high-voltage wiring", detail: "Keep MSTP cable at least 12 inches from 120V/277V wiring. Use separate conduit or tray." },
+  { id: "router", label: "BACnet router is device MAC 0 or lowest MAC on trunk", detail: "The router should hold the token first for fastest routing. Convention: MAC 0 = router, MAC 1+ = controllers." },
+  { id: "maxinfo", label: "Max Info Frames is set appropriately (default: 1)", detail: "Max Info Frames controls how many messages a device can send per token pass. Default 1 is usually fine. Increase to 5 on routers for better throughput." },
+];
+
+function MstpPlannerTab() {
+  const [highestMac, setHighestMac] = useState(10);
+  const [deviceCount, setDeviceCount] = useState(10);
+  const [section, setSection] = useState<"planner" | "baud" | "timing" | "collisions">("planner");
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+
+  const toggleCheck = (id: string) => {
+    setCheckedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const recommendedMaxMaster = highestMac;
+  const allChecked = checkedItems.size === COLLISION_CHECKLIST.length;
+
+  return (
+    <div className="space-y-4">
+      {/* Section toggle */}
+      <div className="flex gap-1 flex-wrap">
+        {([
+          ["planner", "Address Plan"],
+          ["baud", "Baud & Wiring"],
+          ["timing", "Token Timing"],
+          ["collisions", "Collision Check"],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setSection(key)}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              section === key
+                ? "bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30"
+                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--accent)]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ─── Address Planner ─── */}
+      {section === "planner" && (
+        <div className="space-y-4">
+          <div className="rounded-lg bg-[var(--primary)]/5 border border-[var(--primary)]/20 p-3 text-xs text-[var(--muted-foreground)] leading-relaxed">
+            <span className="font-semibold text-[var(--primary)]">MSTP Addressing:</span>{" "}
+            MAC <span className="font-mono text-[var(--foreground)]">0–127</span> = Master devices (controllers, routers).
+            MAC <span className="font-mono text-[var(--foreground)]">128–254</span> = Slave devices (sensors, actuators).
+            MAC <span className="font-mono text-[var(--foreground)]">255</span> = Broadcast (reserved).
+          </div>
+
+          {/* Max Masters Calculator */}
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4 space-y-3">
+            <h4 className="text-sm font-semibold">Max Master Calculator</h4>
+            <div>
+              <label className="block text-xs text-[var(--muted-foreground)] mb-1.5">Highest MAC address on this trunk</label>
+              <input
+                type="number"
+                min={0}
+                max={127}
+                value={highestMac}
+                onChange={(e) => setHighestMac(Math.min(127, Math.max(0, parseInt(e.target.value) || 0)))}
+                className="w-full px-3 py-2.5 rounded-lg bg-[var(--input)] border border-[var(--border)] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+              />
+            </div>
+            <div className={`rounded-lg p-3 ${
+              recommendedMaxMaster <= 31 ? "bg-green-500/5 border border-green-500/20" : "bg-yellow-500/5 border border-yellow-500/20"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{recommendedMaxMaster <= 31 ? "✅" : "⚠️"}</span>
+                <div>
+                  <p className="text-sm font-semibold">Set Max Master = <span className="font-mono text-[var(--primary)]">{recommendedMaxMaster}</span></p>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                    {recommendedMaxMaster <= 10
+                      ? "Excellent — fast token rotation, minimal overhead."
+                      : recommendedMaxMaster <= 20
+                      ? "Good — standard trunk size. Token rotation will be reasonable."
+                      : recommendedMaxMaster <= 31
+                      ? "Acceptable — consider splitting into two trunks if polling is slow."
+                      : "High — token must poll MACs 0 through " + recommendedMaxMaster + ". Expect slower response times."}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
+              <strong>Why it matters:</strong> MSTP polls every MAC from 0 to Max Master looking for devices.
+              Setting Max Master to 127 (default on many devices) means the token checks 128 addresses even if you only have 5 devices — wasting ~90% of bandwidth on empty polls.
+            </p>
+          </div>
+
+          {/* Address Map */}
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+            <h4 className="text-sm font-semibold mb-2">Master Address Map (MAC 0–31)</h4>
+            <p className="text-xs text-[var(--muted-foreground)] mb-3">Common range for BAS trunks. MAC 0 is typically the router.</p>
+            <div className="grid grid-cols-8 gap-1">
+              {Array.from({ length: 32 }, (_, i) => (
+                <div
+                  key={i}
+                  className={`text-center py-1.5 rounded text-xs font-mono ${
+                    i === 0
+                      ? "bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30"
+                      : i <= highestMac
+                      ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                      : "bg-[var(--accent)] text-[var(--muted-foreground)]"
+                  }`}
+                  title={i === 0 ? "Router" : i <= highestMac ? "Active master" : "Available"}
+                >
+                  {i}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-4 mt-2 text-xs text-[var(--muted-foreground)]">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[var(--primary)]/20 border border-[var(--primary)]/30 inline-block" /> Router</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500/10 border border-green-500/20 inline-block" /> Active</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[var(--accent)] inline-block" /> Available</span>
+            </div>
+          </div>
+
+          {/* Slave range note */}
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+            <h4 className="text-sm font-semibold mb-2">Slave Devices (MAC 128–254)</h4>
+            <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
+              Slave devices don&apos;t participate in token passing — they only respond when polled by a master.
+              Common slaves: zone sensors, I/O expanders, VAV actuators. Slave MAC addresses do NOT affect Max Master setting.
+              Many modern &quot;slave&quot; devices (like Distech EC-Smart-Vue sensors) actually operate as masters — check manufacturer docs.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Baud & Wiring ─── */}
+      {section === "baud" && (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] overflow-hidden">
+            <div className="p-3 border-b border-[var(--border)]">
+              <h4 className="text-sm font-semibold">Baud Rate Reference</h4>
+            </div>
+            <div className="divide-y divide-[var(--border)]">
+              {BAUD_RATES.map((b) => (
+                <div key={b.baud} className="p-3 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-sm font-semibold text-[var(--primary)]">{b.baud.toLocaleString()}</span>
+                    <span className="text-xs text-[var(--muted-foreground)]">Max {b.maxDevices} devices</span>
+                  </div>
+                  <div className="text-xs text-[var(--muted-foreground)]">
+                    Max cable: <span className="font-mono text-[var(--foreground)]">{b.maxCable}</span>
+                  </div>
+                  <p className="text-xs text-[var(--muted-foreground)]">{b.notes}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+            <h4 className="text-sm font-semibold mb-3">Wiring Best Practices</h4>
+            <div className="space-y-2 text-xs text-[var(--muted-foreground)] leading-relaxed">
+              <p><strong className="text-[var(--foreground)]">Cable:</strong> 22 AWG shielded twisted pair (STP). Belden 9841 or equivalent. One twisted pair for data (+ and −), shield connected at one end only.</p>
+              <p><strong className="text-[var(--foreground)]">Topology:</strong> Daisy-chain ONLY. No stars, no tees, no branches. Each device connects in series along the trunk.</p>
+              <p><strong className="text-[var(--foreground)]">Termination:</strong> 120Ω resistor across + and − at EACH END of the trunk. Most controllers have a built-in termination jumper — enable it on the first and last device only.</p>
+              <p><strong className="text-[var(--foreground)]">Bias:</strong> Some trunks need bias resistors (pull + to Vcc, pull − to GND) to hold the bus idle state. Most modern controllers have this built-in. Enable on the router if available.</p>
+              <p><strong className="text-[var(--foreground)]">Grounding:</strong> Ground the shield at the controller/head-end only. Never ground both ends — creates a ground loop.</p>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-[var(--primary)]/5 border border-[var(--primary)]/20 p-3 text-xs text-[var(--muted-foreground)] leading-relaxed">
+            <span className="font-semibold text-[var(--primary)]">Field Tip:</span>{" "}
+            If you&apos;re getting intermittent comm losses, try reducing baud from 38400 to 19200 before re-wiring.
+            A lower baud rate is more tolerant of cable issues and noise. You can always increase later once the trunk is stable.
+          </div>
+        </div>
+      )}
+
+      {/* ─── Token Timing ─── */}
+      {section === "timing" && (
+        <div className="space-y-4">
+          <div className="rounded-lg bg-[var(--primary)]/5 border border-[var(--primary)]/20 p-3 text-xs text-[var(--muted-foreground)] leading-relaxed">
+            <span className="font-semibold text-[var(--primary)]">Token Passing:</span>{" "}
+            MSTP uses a token ring over RS-485. The token visits each master MAC from 0 to Max Master.
+            Each device gets one chance to send per token rotation. More devices = slower polling.
+          </div>
+
+          <div>
+            <label className="block text-xs text-[var(--muted-foreground)] mb-1.5">Number of devices on trunk</label>
+            <input
+              type="number"
+              min={1}
+              max={32}
+              value={deviceCount}
+              onChange={(e) => setDeviceCount(Math.min(32, Math.max(1, parseInt(e.target.value) || 1)))}
+              className="w-full px-3 py-2.5 rounded-lg bg-[var(--input)] border border-[var(--border)] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            />
+          </div>
+
+          {/* Computed estimates */}
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+            <h4 className="text-sm font-semibold mb-3">Estimated Timing @ 38400 baud</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between py-1.5 border-b border-[var(--border)]">
+                <span className="text-xs text-[var(--muted-foreground)]">Token Rotation</span>
+                <span className="text-xs font-mono font-medium">~{(deviceCount * 10).toLocaleString()}ms</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-[var(--border)]">
+                <span className="text-xs text-[var(--muted-foreground)]">Effective Poll Rate</span>
+                <span className="text-xs font-mono font-medium">~{(deviceCount * 40).toLocaleString()}ms</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-[var(--border)]">
+                <span className="text-xs text-[var(--muted-foreground)]">Points per Second (est.)</span>
+                <span className="text-xs font-mono font-medium">~{Math.round(1000 / (deviceCount * 40) * deviceCount * 5)} pts/s</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-xs text-[var(--muted-foreground)]">Recommended Max Master</span>
+                <span className="text-xs font-mono font-medium text-[var(--primary)]">{deviceCount}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Reference table */}
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] overflow-hidden">
+            <div className="p-3 border-b border-[var(--border)]">
+              <h4 className="text-sm font-semibold">Common Configurations</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                    <th className="px-3 py-2 text-left font-medium">Devices</th>
+                    <th className="px-3 py-2 text-left font-medium">Baud</th>
+                    <th className="px-3 py-2 text-left font-medium">Token</th>
+                    <th className="px-3 py-2 text-left font-medium">Poll</th>
+                    <th className="px-3 py-2 text-left font-medium">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {TOKEN_TIMING.map((t, i) => (
+                    <tr key={i} className={t.devices === deviceCount ? "bg-[var(--primary)]/5" : ""}>
+                      <td className="px-3 py-2 font-mono">{t.devices}</td>
+                      <td className="px-3 py-2 font-mono">{t.baud.toLocaleString()}</td>
+                      <td className="px-3 py-2 font-mono">{t.tokenRotation}</td>
+                      <td className="px-3 py-2 font-mono">{t.pollRate}</td>
+                      <td className="px-3 py-2 text-[var(--muted-foreground)]">{t.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+            <h4 className="text-sm font-semibold mb-2">Timing Formulas</h4>
+            <div className="space-y-2 text-xs text-[var(--muted-foreground)] font-mono leading-relaxed bg-[var(--background)] rounded p-3">
+              <p>Token Rotation ≈ Max_Master × 10ms (at 38400 baud)</p>
+              <p>Token Rotation ≈ Max_Master × 40ms (at 9600 baud)</p>
+              <p>Poll Rate ≈ Token_Rotation × 4 (typical BACnet stack)</p>
+              <p>Max_Info_Frames = 1 (default) → 1 msg per token pass</p>
+              <p>Tusage_timeout = 20ms (how long to wait for response)</p>
+              <p>Treply_timeout = 255ms (max wait for poll response)</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Collision Checklist ─── */}
+      {section === "collisions" && (
+        <div className="space-y-4">
+          <div className={`rounded-lg p-3 text-xs leading-relaxed ${
+            allChecked
+              ? "bg-green-500/5 border border-green-500/20 text-green-400"
+              : "bg-[var(--primary)]/5 border border-[var(--primary)]/20 text-[var(--muted-foreground)]"
+          }`}>
+            {allChecked
+              ? "✅ All checks passed — your MSTP trunk configuration looks solid."
+              : `Checked ${checkedItems.size} of ${COLLISION_CHECKLIST.length} items. Verify each item on-site.`}
+          </div>
+
+          <div className="space-y-2">
+            {COLLISION_CHECKLIST.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => toggleCheck(item.id)}
+                className={`w-full text-left rounded-lg border p-3.5 transition-colors ${
+                  checkedItems.has(item.id)
+                    ? "border-green-500/30 bg-green-500/5"
+                    : "border-[var(--border)] bg-[var(--card)] hover:border-[var(--primary)]/30"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-xs ${
+                    checkedItems.has(item.id)
+                      ? "bg-green-500 text-white"
+                      : "border border-[var(--border)] text-transparent"
+                  }`}>
+                    {checkedItems.has(item.id) ? "✓" : ""}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${checkedItems.has(item.id) ? "text-green-400" : ""}`}>
+                      {item.label}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)] mt-1 leading-relaxed">{item.detail}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setCheckedItems(new Set())}
+            className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+          >
+            Reset checklist
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── main ─── */
 
 export default function BACnetCalculator() {
@@ -624,6 +974,7 @@ export default function BACnetCalculator() {
       {tab === "Gateway Check" && <GatewayCheckTab />}
       {tab === "VLAN Reference" && <VlanReferenceTab />}
       {tab === "Can't Ping?" && <CantPingTab />}
+      {tab === "MSTP" && <MstpPlannerTab />}
     </div>
   );
 }
