@@ -106,7 +106,7 @@ function MoreSheet({
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
         }`}
-        style={{ background: "rgba(0,0,0,0.45)" }}
+        style={{ background: "var(--overlay-backdrop)" }}
       />
 
       {/* Sheet */}
@@ -121,9 +121,9 @@ function MoreSheet({
         <div
           className="rounded-2xl overflow-hidden"
           style={{
-            background: "rgba(22, 22, 28, 0.97)",
+            background: "var(--sheet-bg)",
             border: "1px solid var(--border)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+            boxShadow: "var(--sheet-shadow)",
             backdropFilter: "blur(20px) saturate(150%)",
             WebkitBackdropFilter: "blur(20px) saturate(150%)",
           }}
@@ -145,7 +145,7 @@ function MoreSheet({
                   className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
                     isActive
                       ? "bg-[var(--primary)]/10 text-[var(--primary)]"
-                      : "text-[var(--foreground)] active:bg-white/5"
+                      : "text-[var(--foreground)] active:bg-[var(--accent)]"
                   }`}
                 >
                   <span className="text-xl">{item.icon}</span>
@@ -200,9 +200,9 @@ export default function MobileNav() {
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50"
         style={{
-          background: "rgba(14, 14, 18, 0.92)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          boxShadow: "0 -1px 20px rgba(0,0,0,0.4)",
+          background: "var(--mobile-nav-bg)",
+          borderTop: "1px solid var(--mobile-nav-border)",
+          boxShadow: "var(--mobile-nav-shadow)",
           backdropFilter: "blur(20px) saturate(150%)",
           WebkitBackdropFilter: "blur(20px) saturate(150%)",
           paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",

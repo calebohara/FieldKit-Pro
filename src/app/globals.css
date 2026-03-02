@@ -1,6 +1,33 @@
 @import "tailwindcss";
 
 :root {
+  --background: #f6f8fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #d7deea;
+  --input: #ffffff;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eef9;
+  --secondary-foreground: #1e293b;
+  --muted: #eef2f8;
+  --muted-foreground: #475569;
+  --accent: #edf2fb;
+  --accent-foreground: #1e293b;
+  --destructive: #ef4444;
+  --ring: #3b82f6;
+  --radius: 0.5rem;
+  --overlay-backdrop: rgba(15, 23, 42, 0.24);
+  --sheet-bg: rgba(255, 255, 255, 0.96);
+  --sheet-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  --mobile-nav-bg: rgba(255, 255, 255, 0.92);
+  --mobile-nav-border: rgba(15, 23, 42, 0.12);
+  --mobile-nav-shadow: 0 -1px 20px rgba(15, 23, 42, 0.16);
+  color-scheme: light;
+}
+
+html.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
   --card: #141414;
@@ -17,7 +44,13 @@
   --accent-foreground: #e2e8f0;
   --destructive: #ef4444;
   --ring: #3b82f6;
-  --radius: 0.5rem;
+  --overlay-backdrop: rgba(0, 0, 0, 0.45);
+  --sheet-bg: rgba(22, 22, 28, 0.97);
+  --sheet-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --mobile-nav-bg: rgba(14, 14, 18, 0.92);
+  --mobile-nav-border: rgba(255, 255, 255, 0.06);
+  --mobile-nav-shadow: 0 -1px 20px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
 }
 
 body {

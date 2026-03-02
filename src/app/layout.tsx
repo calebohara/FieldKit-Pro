@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "FieldKit Pro — Field Engineering Toolkit for Controls Engineers",
@@ -69,12 +70,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased overflow-x-hidden">
+        <div className="fixed top-3 right-3 z-[90]">
+          <ThemeToggle />
+        </div>
         {children}
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              (function () {
+                try {
+                  const key = 'fieldkit-theme';
+                  const saved = localStorage.getItem(key);
+                  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  const useDark = saved ? saved === 'dark' : prefersDark;
+                  if (useDark) document.documentElement.classList.add('dark');
+                  else document.documentElement.classList.remove('dark');
+                } catch {}
+              })();
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                   navigator.serviceWorker.register('/sw.js');
