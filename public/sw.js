@@ -12,6 +12,7 @@ const PRECACHE_URLS = [
   "/dashboard/drives/yaskawa",
   "/dashboard/loop-tuning",
   "/dashboard/psychrometrics",
+  "/dashboard/conversions",
   "/dashboard/settings",
   "/offline.html",
 ];

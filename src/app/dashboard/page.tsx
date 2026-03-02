@@ -36,6 +36,12 @@ const tools = [
     title: "Psychrometrics",
     description: "Dewpoint, enthalpy, RH, and mixed air calculations",
   },
+  {
+    href: "/dashboard/conversions",
+    icon: "🔄",
+    title: "Unit Conversions",
+    description: "kPa/inWC, CFM/L/s, RTD tables, and signal scaling",
+  },
 ];
 
 export default function DashboardPage() {

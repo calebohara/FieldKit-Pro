@@ -10,6 +10,7 @@ const navItems = [
   { href: "/dashboard/drives/abb", label: "ABB", icon: "⚡" },
   { href: "/dashboard/drives/yaskawa", label: "Yaskawa", icon: "⚡" },
   { href: "/dashboard/psychrometrics", label: "Psych", icon: "🌡️" },
+  { href: "/dashboard/conversions", label: "Units", icon: "🔄" },
   { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
 ];
 

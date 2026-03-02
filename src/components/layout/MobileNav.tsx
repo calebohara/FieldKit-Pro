@@ -9,6 +9,7 @@ const navItems = [
   { href: "/dashboard/loop-tuning", label: "Tuning", icon: "📊" },
   { href: "/dashboard/drives/abb", label: "Drives", icon: "⚡" },
   { href: "/dashboard/psychrometrics", label: "Psych", icon: "🌡️" },
+  { href: "/dashboard/conversions", label: "Units", icon: "🔄" },
   { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
 ];
 
