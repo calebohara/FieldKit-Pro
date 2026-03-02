@@ -64,6 +64,55 @@ const presets: Preset[] = [
     overshoot: "none",
     description: "Building pressurization via relief or return fan",
   },
+  {
+    name: "VAV Box Airflow",
+    processType: "flow",
+    responseTime: 15,
+    overshoot: "none",
+    description: "VAV terminal unit airflow control with pressure-independent controller",
+  },
+  {
+    name: "Cooling Tower Fan",
+    processType: "cooling",
+    responseTime: 120,
+    overshoot: "low",
+    description: "Cooling tower fan speed control for condenser water temperature",
+  },
+  {
+    name: "Boiler HW Supply",
+    processType: "heating",
+    responseTime: 240,
+    overshoot: "none",
+    description: "Boiler hot water supply temperature control — slow thermal mass",
+  },
+  {
+    name: "Chiller CHW Supply",
+    processType: "cooling",
+    responseTime: 180,
+    overshoot: "none",
+    description: "Chiller leaving chilled water temperature control",
+  },
+  {
+    name: "Exhaust Fan Pressure",
+    processType: "pressure",
+    responseTime: 20,
+    overshoot: "none",
+    description: "Exhaust fan speed control for kitchen or lab hood pressure",
+  },
+  {
+    name: "Condenser Water",
+    processType: "cooling",
+    responseTime: 150,
+    overshoot: "low",
+    description: "Condenser water temperature control via cooling tower staging",
+  },
+  {
+    name: "Humidifier Control",
+    processType: "flow",
+    responseTime: 90,
+    overshoot: "low",
+    description: "Steam or electrode humidifier controlling space or duct humidity",
+  },
 ];
 
 // ----- Tuning Tips -----
@@ -117,6 +166,36 @@ const tuningTips: TuningTip[] = [
       "Integral action needed if offset is unacceptable",
       "Avoid derivative — airflow signal is often noisy",
       "Ensure flow sensor is calibrated and reading correctly",
+    ],
+  },
+  {
+    loop: "Cooling Tower / Condenser Water",
+    tips: [
+      "Long thermal lag — use conservative integral times (120-240s)",
+      "Staging fans is more energy efficient than modulating all at once",
+      "Enable wet-bulb approach reset for energy savings",
+      "Avoid cycling — add hysteresis between fan speed stages",
+      "Consider condenser water reset based on chiller efficiency",
+    ],
+  },
+  {
+    loop: "Boiler / Hot Water Reset",
+    tips: [
+      "Boiler thermal mass is huge — very slow response expected",
+      "Use outdoor air reset schedule to lower HW supply setpoint",
+      "Integral action is critical — P-only will always have offset",
+      "Monitor return water temperature to avoid thermal shock",
+      "Stage boilers on lead-lag with delay timers between stages",
+    ],
+  },
+  {
+    loop: "Humidification",
+    tips: [
+      "Humidity sensors drift — calibrate seasonally",
+      "Steam humidifiers respond faster than electrode types",
+      "Place duct humidity sensor 10+ feet downstream of injection",
+      "Deadband between humidification and dehumidification: 5-10% RH",
+      "In cold climates, limit humidity based on window condensation",
     ],
   },
 ];
