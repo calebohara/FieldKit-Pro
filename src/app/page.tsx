@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const features = [
   {
@@ -72,6 +73,7 @@ export default function LandingPage() {
             <span><span className="text-[var(--primary)]">FieldKit</span> Pro</span>
           </span>
           <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle />
             <Link
               href="/login"
               className="px-2.5 sm:px-4 py-2 text-xs sm:text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"

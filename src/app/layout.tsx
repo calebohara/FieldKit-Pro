@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import ThemeToggle from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "FieldKit Pro — Field Engineering Toolkit for Controls Engineers",
@@ -72,9 +71,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased overflow-x-hidden">
-        <div className="fixed top-3 right-3 z-[90]">
-          <ThemeToggle />
-        </div>
         {children}
         <script
           dangerouslySetInnerHTML={{

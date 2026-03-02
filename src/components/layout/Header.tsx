@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useJobReport } from "@/lib/job-report";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Header() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function Header() {
         </span>
       </h2>
       <div className="ml-auto flex items-center gap-2">
+        <ThemeToggle />
         <Link
           href="/dashboard/reports"
           className="px-3 py-1.5 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--accent)] transition-all duration-200"
