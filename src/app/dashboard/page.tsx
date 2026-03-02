@@ -7,6 +7,12 @@ export const metadata: Metadata = {
 
 const tools = [
   {
+    href: "/dashboard/troubleshooting",
+    icon: "🧭",
+    title: "Drive Troubleshooter",
+    description: "Guided fault-to-fix flow with targeted parameter checks",
+  },
+  {
     href: "/dashboard/ppcl",
     icon: "🔧",
     title: "PPCL Tools",
