@@ -57,16 +57,9 @@ function GlassNavItem({
           : "text-white/60 active:scale-95"
       }`}
     >
-      {/* Active sub-pill — darker frosted glass behind active item */}
+      {/* Active sub-pill — concave glass depression */}
       {isActive && (
-        <span
-          className="absolute inset-0 rounded-2xl"
-          style={{
-            background: "rgba(255, 255, 255, 0.12)",
-            boxShadow:
-              "inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.2)",
-          }}
-        />
+        <span className="absolute inset-0 rounded-2xl liquid-glass-active" />
       )}
       <span
         className={`text-[18px] mb-0.5 relative z-10 transition-transform duration-200 ${
@@ -111,14 +104,7 @@ function GlassMoreButton({
       }`}
     >
       {showActive && (
-        <span
-          className="absolute inset-0 rounded-2xl"
-          style={{
-            background: "rgba(255, 255, 255, 0.12)",
-            boxShadow:
-              "inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.2)",
-          }}
-        />
+        <span className="absolute inset-0 rounded-2xl liquid-glass-active" />
       )}
       <span
         className={`text-[18px] mb-0.5 relative z-10 transition-transform duration-300 ${
@@ -242,16 +228,14 @@ function MoreSheet({
         }`}
       >
         <div
-          className="overflow-hidden rounded-2xl"
+          className={`rounded-2xl ${
+            platform === "ios" ? "liquid-glass" : ""
+          }`}
           style={
             platform === "ios"
               ? {
-                  background: "rgba(40, 36, 60, 0.65)",
-                  backdropFilter: "blur(40px) saturate(200%)",
-                  WebkitBackdropFilter: "blur(40px) saturate(200%)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  boxShadow:
-                    "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(40px) saturate(200%) brightness(1.05)",
+                  WebkitBackdropFilter: "blur(40px) saturate(200%) brightness(1.05)",
                 }
               : {
                   background: "rgba(28, 28, 32, 0.97)",
@@ -354,14 +338,10 @@ export default function MobileNav() {
           style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
         >
           <div
-            className="flex items-center justify-around py-1 px-1 rounded-[26px]"
+            className="liquid-glass flex items-center justify-around py-1 px-1 rounded-[26px]"
             style={{
-              background: "rgba(40, 36, 60, 0.55)",
-              backdropFilter: "blur(40px) saturate(200%)",
-              WebkitBackdropFilter: "blur(40px) saturate(200%)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              boxShadow:
-                "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 0.5px rgba(255,255,255,0.05)",
+              backdropFilter: "blur(40px) saturate(200%) brightness(1.05)",
+              WebkitBackdropFilter: "blur(40px) saturate(200%) brightness(1.05)",
             }}
           >
             {primaryItems.map((item) => {
