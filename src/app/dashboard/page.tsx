@@ -30,6 +30,12 @@ const tools = [
     title: "Yaskawa Drives",
     description: "Fault codes, parameters, and setup guides",
   },
+  {
+    href: "/dashboard/psychrometrics",
+    icon: "🌡️",
+    title: "Psychrometrics",
+    description: "Dewpoint, enthalpy, RH, and mixed air calculations",
+  },
 ];
 
 export default function DashboardPage() {

@@ -1,7 +1,7 @@
 // FieldKit Pro Service Worker — Offline-capable PWA
 // Caches tool pages so field engineers can look up fault codes without signal
 
-const CACHE_VERSION = "fieldkit-v2";
+const CACHE_VERSION = "fieldkit-v3";
 const PRECACHE_URLS = [
   "/dashboard",
   "/dashboard/ppcl",
@@ -11,6 +11,7 @@ const PRECACHE_URLS = [
   "/dashboard/drives/abb",
   "/dashboard/drives/yaskawa",
   "/dashboard/loop-tuning",
+  "/dashboard/psychrometrics",
   "/dashboard/settings",
   "/offline.html",
 ];
