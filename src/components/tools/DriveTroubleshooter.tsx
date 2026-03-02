@@ -101,15 +101,13 @@ export default function DriveTroubleshooter() {
 
   const filteredFaults = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return faults.slice(0, 12);
-    return faults
-      .filter((fault) => {
-        return [fault.code, fault.name, fault.category, fault.description]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalized);
-      })
-      .slice(0, 20);
+    if (!normalized) return faults;
+    return faults.filter((fault) => {
+      return [fault.code, fault.name, fault.category, fault.description]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalized);
+    });
   }, [faults, query]);
 
   const selectedFault =
@@ -126,14 +124,6 @@ export default function DriveTroubleshooter() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-        <h2 className="text-xl font-semibold">Drive Fault Troubleshooter</h2>
-        <p className="text-sm text-[var(--muted-foreground)] mt-2">
-          Guided flow: choose drive family, select the active fault, then walk
-          through causes, parameter checks, and recovery actions.
-        </p>
-      </section>
-
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
@@ -171,6 +161,9 @@ export default function DriveTroubleshooter() {
             Step 2
           </p>
           <h3 className="font-medium mt-1">Find and select current fault</h3>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
+            Showing {filteredFaults.length} of {faults.length} {brand.toUpperCase()} fault codes.
+          </p>
         </div>
         <input
           type="text"

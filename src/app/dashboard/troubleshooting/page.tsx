@@ -10,12 +10,7 @@ export const metadata: Metadata = {
 export default function DriveTroubleshootingPage() {
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">Drive Troubleshooter</h1>
-        <p className="text-sm text-[var(--muted-foreground)] mt-1">
-          Guided diagnosis and recovery steps for common drive faults.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold">Drive Troubleshooter</h1>
       <DriveTroubleshooter />
     </div>
   );
