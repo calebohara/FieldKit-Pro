@@ -15,8 +15,8 @@ export default function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[var(--border)] bg-[var(--card)] z-50">
-      <div className="flex items-center justify-around">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[var(--border)] nav-backdrop z-50">
+      <div className="flex items-center justify-around px-1 pb-[env(safe-area-inset-bottom)]">
         {navItems.map((item) => {
           const isActive =
             item.href === "/dashboard"
@@ -26,14 +26,21 @@ export default function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center py-2 px-2 min-h-14 min-w-[3rem] text-xs transition-colors ${
+              className={`relative flex flex-col items-center justify-center py-2.5 px-3 min-h-[3.5rem] min-w-[3.5rem] text-xs transition-all duration-200 ${
                 isActive
                   ? "text-[var(--primary)]"
-                  : "text-[var(--muted-foreground)]"
+                  : "text-[var(--muted-foreground)] active:scale-95"
               }`}
             >
-              <span className="text-xl mb-0.5">{item.icon}</span>
-              <span>{item.label}</span>
+              {isActive && (
+                <span className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--primary)]" />
+              )}
+              <span className={`text-xl mb-0.5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`}>
+                {item.icon}
+              </span>
+              <span className={`transition-colors duration-200 ${isActive ? "font-medium" : ""}`}>
+                {item.label}
+              </span>
             </Link>
           );
         })}

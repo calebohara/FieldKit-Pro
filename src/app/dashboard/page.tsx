@@ -34,20 +34,20 @@ const tools = [
 
 export default function DashboardPage() {
   return (
-    <div>
+    <div className="animate-fade-in">
       <h1 className="text-2xl font-bold mb-6">Your Toolkit</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 stagger-children">
         {tools.map((tool) => (
           <Link
             key={tool.href}
             href={tool.href}
-            className="p-5 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--primary)] transition-colors group"
+            className="card-interactive p-5 rounded-xl bg-[var(--card)] border border-[var(--border)] group"
           >
-            <div className="text-2xl mb-2">{tool.icon}</div>
-            <h3 className="font-semibold group-hover:text-[var(--primary)] transition-colors">
+            <div className="text-3xl mb-3">{tool.icon}</div>
+            <h3 className="font-semibold text-base group-hover:text-[var(--primary)] transition-colors">
               {tool.title}
             </h3>
-            <p className="text-sm text-[var(--muted-foreground)] mt-1">
+            <p className="text-sm text-[var(--muted-foreground)] mt-1.5 leading-relaxed">
               {tool.description}
             </p>
           </Link>
