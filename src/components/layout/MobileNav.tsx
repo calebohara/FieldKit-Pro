@@ -19,7 +19,7 @@ const allNavItems = [
   { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
 ];
 
-const PRIMARY_COUNT = 5;
+const PRIMARY_COUNT = 4;
 const primaryItems = allNavItems.slice(0, PRIMARY_COUNT);
 const overflowItems = allNavItems.slice(PRIMARY_COUNT);
 

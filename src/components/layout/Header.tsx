@@ -31,15 +31,17 @@ export default function Header() {
         <ThemeToggle />
         <Link
           href="/dashboard/reports"
-          className="px-3 py-1.5 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--accent)] transition-all duration-200"
+          className="hidden sm:inline-flex px-3 py-1.5 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--accent)] transition-all duration-200"
         >
           Reports ({entries.length})
         </Link>
         <button
           onClick={handleSignOut}
           className="px-3 py-1.5 text-sm rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] transition-all duration-200"
+          aria-label="Sign out"
         >
-          Sign out
+          <span className="sm:hidden">⎋</span>
+          <span className="hidden sm:inline">Sign out</span>
         </button>
       </div>
     </header>
