@@ -13,6 +13,7 @@ const PRECACHE_URLS = [
   "/dashboard/loop-tuning",
   "/dashboard/psychrometrics",
   "/dashboard/conversions",
+  "/dashboard/bacnet",
   "/dashboard/settings",
   "/offline.html",
 ];

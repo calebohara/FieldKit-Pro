@@ -42,6 +42,12 @@ const tools = [
     title: "Unit Conversions",
     description: "kPa/inWC, CFM/L/s, RTD tables, and signal scaling",
   },
+  {
+    href: "/dashboard/bacnet",
+    icon: "🌐",
+    title: "BACnet/IP Tools",
+    description: "Subnet calculator, gateway checks, and ping troubleshooter",
+  },
 ];
 
 export default function DashboardPage() {

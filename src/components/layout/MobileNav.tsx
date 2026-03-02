@@ -10,6 +10,7 @@ const navItems = [
   { href: "/dashboard/drives/abb", label: "Drives", icon: "⚡" },
   { href: "/dashboard/psychrometrics", label: "Psych", icon: "🌡️" },
   { href: "/dashboard/conversions", label: "Units", icon: "🔄" },
+  { href: "/dashboard/bacnet", label: "BACnet", icon: "🌐" },
   { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
 ];
 
