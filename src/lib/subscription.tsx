@@ -90,13 +90,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const canUseTool = useCallback(
-    (toolName: string) => {
-      if (role === "pro" || role === "admin") return true;
-      if (FREE_TOOLS.includes(toolName)) return true;
-      if (PRO_ONLY_TOOLS.includes(toolName)) return false;
-      if (RATE_LIMITED_TOOLS.includes(toolName)) {
-        return dailyUsage < FREE_DAILY_LIMIT;
-      }
+    (_toolName: string) => {
+      // TODO: Re-enable paywall before production launch
+      // if (role === "pro" || role === "admin") return true;
+      // if (FREE_TOOLS.includes(toolName)) return true;
+      // if (PRO_ONLY_TOOLS.includes(toolName)) return false;
+      // if (RATE_LIMITED_TOOLS.includes(toolName)) {
+      //   return dailyUsage < FREE_DAILY_LIMIT;
+      // }
       return true;
     },
     [role, dailyUsage]

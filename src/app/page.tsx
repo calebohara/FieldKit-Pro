@@ -78,12 +78,6 @@ export default function LandingPage() {
             >
               Log in
             </Link>
-            <Link
-              href="/signup"
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-[var(--primary)] text-[var(--primary-foreground)] rounded-md hover:opacity-90 transition-opacity whitespace-nowrap"
-            >
-              Get Started Free
-            </Link>
           </div>
         </div>
       </header>
