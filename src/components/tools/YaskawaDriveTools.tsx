@@ -165,6 +165,8 @@ export default function YaskawaDriveTools() {
             categoryKey="category"
             categoryLabel="Categories"
             searchPlaceholder="Search fault codes, names, or descriptions..."
+            getItemId={(fault) => `yaskawa-fault-${fault.code}`}
+            mobileSummaryKeys={["code", "name"]}
             renderRowActions={(fault) => (
               <button
                 onClick={() =>
@@ -198,6 +200,8 @@ export default function YaskawaDriveTools() {
             categoryKey="group"
             categoryLabel="Groups"
             searchPlaceholder="Search parameters..."
+            getItemId={(param) => `yaskawa-param-${param.parameter}`}
+            mobileSummaryKeys={["parameter", "name"]}
             renderRowActions={(param) => (
               <button
                 onClick={() =>

@@ -20,6 +20,8 @@ export default function PPCLErrorsPage() {
         categoryKey="category"
         categoryLabel="Categories"
         searchPlaceholder="Search errors, symptoms, or fixes..."
+        getItemId={(row) => `ppcl-error-${row.error}`}
+        mobileSummaryKeys={["error", "symptoms"]}
       />
     </div>
   );

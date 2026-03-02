@@ -20,6 +20,8 @@ export default function PPCLReferencePage() {
         categoryKey="category"
         categoryLabel="Categories"
         searchPlaceholder="Search commands, syntax, or descriptions..."
+        getItemId={(row) => `ppcl-command-${row.command}`}
+        mobileSummaryKeys={["command", "syntax"]}
       />
     </div>
   );

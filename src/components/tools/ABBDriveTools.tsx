@@ -164,6 +164,8 @@ export default function ABBDriveTools() {
             categoryKey="category"
             categoryLabel="Categories"
             searchPlaceholder="Search fault codes, names, or descriptions..."
+            getItemId={(fault) => `abb-fault-${fault.code}`}
+            mobileSummaryKeys={["code", "name"]}
             renderRowActions={(fault) => (
               <button
                 onClick={() =>
@@ -197,6 +199,8 @@ export default function ABBDriveTools() {
             categoryKey="group"
             categoryLabel="Groups"
             searchPlaceholder="Search parameters..."
+            getItemId={(param) => `abb-param-${param.parameter}`}
+            mobileSummaryKeys={["parameter", "name"]}
             renderRowActions={(param) => (
               <button
                 onClick={() =>
