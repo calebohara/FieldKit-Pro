@@ -203,9 +203,10 @@ export default function MobileNav() {
           boxShadow: "0 -1px 20px rgba(0,0,0,0.4)",
           backdropFilter: "blur(20px) saturate(150%)",
           WebkitBackdropFilter: "blur(20px) saturate(150%)",
+          paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
         }}
       >
-        <div className="flex items-center justify-around px-1 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-center justify-around px-1">
           {primaryItems.map((item) => {
             const isActive =
               item.href === "/dashboard"
