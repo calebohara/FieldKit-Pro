@@ -8,6 +8,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const allNavItems = [
   { href: "/dashboard", label: "Home", icon: "🏠" },
   { href: "/dashboard/troubleshooting", label: "Guide", icon: "🧭" },
+  { href: "/dashboard/reports", label: "Reports", icon: "📝" },
   { href: "/dashboard/ppcl", label: "PPCL", icon: "🔧" },
   { href: "/dashboard/loop-tuning", label: "Tuning", icon: "📊" },
   { href: "/dashboard/drives/abb", label: "Drives", icon: "⚡" },

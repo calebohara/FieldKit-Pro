@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useJobReport } from "@/lib/job-report";
 
 // ----- Types -----
 
@@ -432,6 +433,7 @@ export default function PIDCalculator() {
   const [responseTime, setResponseTime] = useState(120);
   const [overshoot, setOvershoot] = useState<OvershootTolerance>("low");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const { addEntry } = useJobReport();
 
   const pid = useMemo(
     () => calculatePID(processType, responseTime, overshoot),
@@ -566,6 +568,28 @@ export default function PIDCalculator() {
           <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
             {explanation}
           </p>
+          <button
+            onClick={() =>
+              addEntry({
+                type: "pid",
+                title: `PID snapshot (${processType})`,
+                summary: `P=${pid.p}, I=${pid.i}s, D=${pid.d}s`,
+                source: "PID Loop Tuning",
+                fields: {
+                  Process: processType,
+                  "Response Time (s)": String(responseTime),
+                  "Overshoot Tolerance": overshoot,
+                  P: String(pid.p),
+                  I: String(pid.i),
+                  D: String(pid.d),
+                  Preset: activePreset ?? "Custom",
+                },
+              })
+            }
+            className="mt-4 px-3 py-2 rounded-md text-sm font-medium border border-[var(--border)] hover:bg-[var(--accent)] min-h-11"
+          >
+            Add PID snapshot to report
+          </button>
         </div>
 
         {/* Response Curve */}

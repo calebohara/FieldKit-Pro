@@ -7,6 +7,7 @@ import { yaskawaFaults, type YaskawaFault } from "@/lib/data/yaskawa-faults";
 import { abbParameters } from "@/lib/data/abb-parameters";
 import { yaskawaParameters } from "@/lib/data/yaskawa-parameters";
 import { useSubscription } from "@/lib/subscription";
+import { useJobReport } from "@/lib/job-report";
 
 type Brand = "abb" | "yaskawa";
 type Fault = ABBFault | YaskawaFault;
@@ -83,6 +84,7 @@ export default function DriveTroubleshooter() {
   const [query, setQuery] = useState("");
   const [selectedCode, setSelectedCode] = useState("");
   const { recordUsage } = useSubscription();
+  const { addEntry } = useJobReport();
   const tracked = useRef(false);
 
   useEffect(() => {
@@ -267,6 +269,27 @@ export default function DriveTroubleshooter() {
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() =>
+                  addEntry({
+                    type: "fault",
+                    title: `${brand.toUpperCase()} ${selectedFault.code} - ${selectedFault.name}`,
+                    summary: selectedFault.description,
+                    source: "Drive Troubleshooter",
+                    fields: {
+                      Category: selectedFault.category,
+                      Causes: selectedFault.causes,
+                      Remedy: selectedFault.remedy,
+                      "Suggested Checks": parameterChecks
+                        .map((param) => `${param.parameter} ${param.name}`)
+                        .join(", "),
+                    },
+                  })
+                }
+                className="px-3 py-2 rounded-md border border-[var(--border)] text-sm font-medium min-h-11 inline-flex items-center hover:bg-[var(--accent)]"
+              >
+                Add fault plan to report
+              </button>
               <Link
                 href={
                   brand === "abb"

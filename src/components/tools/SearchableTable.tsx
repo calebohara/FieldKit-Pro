@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import type { ReactNode } from "react";
 
 // Generic column configuration — works with any data shape
 interface ColumnConfig<T> {
@@ -20,6 +21,8 @@ interface SearchableTableProps<T extends Record<string, any>> {
   categoryLabel?: string;
   // Optional: placeholder text for search input
   searchPlaceholder?: string;
+  // Optional: render custom row actions (for example "Add to report")
+  renderRowActions?: (item: T) => ReactNode;
 }
 
 // Highlights matching search terms within text
@@ -28,11 +31,15 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 
   const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
   const parts = text.split(regex);
+  const isMatch = (part: string) => {
+    const nonGlobal = new RegExp(regex.source, "i");
+    return nonGlobal.test(part);
+  };
 
   return (
     <>
       {parts.map((part, i) =>
-        regex.test(part) ? (
+        isMatch(part) ? (
           <mark key={i} className="bg-[var(--primary)]/30 text-[var(--foreground)] rounded px-0.5">
             {part}
           </mark>
@@ -51,6 +58,7 @@ export default function SearchableTable<T extends Record<string, any>>({
   categoryKey,
   categoryLabel = "Category",
   searchPlaceholder = "Search...",
+  renderRowActions,
 }: SearchableTableProps<T>) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -138,6 +146,11 @@ export default function SearchableTable<T extends Record<string, any>>({
                     {col.label}
                   </th>
                 ))}
+                {renderRowActions && (
+                  <th className="text-left px-4 py-3 font-medium text-[var(--muted-foreground)]">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -154,6 +167,9 @@ export default function SearchableTable<T extends Record<string, any>>({
                       />
                     </td>
                   ))}
+                  {renderRowActions && (
+                    <td className="px-4 py-3 align-top">{renderRowActions(item)}</td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -182,6 +198,9 @@ export default function SearchableTable<T extends Record<string, any>>({
                   </p>
                 </div>
               ))}
+              {renderRowActions && (
+                <div className="pt-1">{renderRowActions(item)}</div>
+              )}
             </div>
           ))}
         </div>

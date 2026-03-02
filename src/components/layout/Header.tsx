@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useJobReport } from "@/lib/job-report";
 
 export default function Header() {
   const router = useRouter();
+  const { entries } = useJobReport();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -23,7 +26,13 @@ export default function Header() {
           <span className="text-[var(--primary)]">FieldKit</span> Pro
         </span>
       </h2>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
+        <Link
+          href="/dashboard/reports"
+          className="px-3 py-1.5 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--accent)] transition-all duration-200"
+        >
+          Reports ({entries.length})
+        </Link>
         <button
           onClick={handleSignOut}
           className="px-3 py-1.5 text-sm rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] transition-all duration-200"

@@ -5,6 +5,7 @@ import SearchableTable from "./SearchableTable";
 import { abbFaults } from "@/lib/data/abb-faults";
 import { abbParameters } from "@/lib/data/abb-parameters";
 import { PaidFeatureGate, useSubscription } from "@/lib/subscription";
+import { useJobReport } from "@/lib/job-report";
 
 type Tab = "faults" | "parameters" | "configs";
 
@@ -119,6 +120,7 @@ const commonConfigs: CommonConfig[] = [
 export default function ABBDriveTools() {
   const [tab, setTab] = useState<Tab>("faults");
   const { recordUsage } = useSubscription();
+  const { addEntry } = useJobReport();
   const tracked = useRef(false);
 
   useEffect(() => {
@@ -162,6 +164,26 @@ export default function ABBDriveTools() {
             categoryKey="category"
             categoryLabel="Categories"
             searchPlaceholder="Search fault codes, names, or descriptions..."
+            renderRowActions={(fault) => (
+              <button
+                onClick={() =>
+                  addEntry({
+                    type: "fault",
+                    title: `ABB ${fault.code} - ${fault.name}`,
+                    summary: fault.description,
+                    source: "ABB fault lookup",
+                    fields: {
+                      Category: fault.category,
+                      Causes: fault.causes,
+                      Remedy: fault.remedy,
+                    },
+                  })
+                }
+                className="px-2.5 py-1.5 rounded-md text-xs font-medium border border-[var(--border)] hover:bg-[var(--accent)]"
+              >
+                Add to report
+              </button>
+            )}
           />
         </PaidFeatureGate>
       )}
@@ -175,6 +197,27 @@ export default function ABBDriveTools() {
             categoryKey="group"
             categoryLabel="Groups"
             searchPlaceholder="Search parameters..."
+            renderRowActions={(param) => (
+              <button
+                onClick={() =>
+                  addEntry({
+                    type: "parameter-change",
+                    title: `ABB parameter ${param.parameter} review`,
+                    summary: param.description,
+                    source: "ABB parameter lookup",
+                    fields: {
+                      Parameter: param.parameter,
+                      Name: param.name,
+                      Range: param.range,
+                      Default: param.defaultValue,
+                    },
+                  })
+                }
+                className="px-2.5 py-1.5 rounded-md text-xs font-medium border border-[var(--border)] hover:bg-[var(--accent)]"
+              >
+                Add to report
+              </button>
+            )}
           />
         </PaidFeatureGate>
       )}

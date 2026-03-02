@@ -5,6 +5,7 @@ import SearchableTable from "./SearchableTable";
 import { yaskawaFaults } from "@/lib/data/yaskawa-faults";
 import { yaskawaParameters } from "@/lib/data/yaskawa-parameters";
 import { PaidFeatureGate, useSubscription } from "@/lib/subscription";
+import { useJobReport } from "@/lib/job-report";
 
 type Tab = "faults" | "parameters" | "configs";
 
@@ -120,6 +121,7 @@ const commonConfigs: CommonConfig[] = [
 export default function YaskawaDriveTools() {
   const [tab, setTab] = useState<Tab>("faults");
   const { recordUsage } = useSubscription();
+  const { addEntry } = useJobReport();
   const tracked = useRef(false);
 
   useEffect(() => {
@@ -163,6 +165,26 @@ export default function YaskawaDriveTools() {
             categoryKey="category"
             categoryLabel="Categories"
             searchPlaceholder="Search fault codes, names, or descriptions..."
+            renderRowActions={(fault) => (
+              <button
+                onClick={() =>
+                  addEntry({
+                    type: "fault",
+                    title: `Yaskawa ${fault.code} - ${fault.name}`,
+                    summary: fault.description,
+                    source: "Yaskawa fault lookup",
+                    fields: {
+                      Category: fault.category,
+                      Causes: fault.causes,
+                      Remedy: fault.remedy,
+                    },
+                  })
+                }
+                className="px-2.5 py-1.5 rounded-md text-xs font-medium border border-[var(--border)] hover:bg-[var(--accent)]"
+              >
+                Add to report
+              </button>
+            )}
           />
         </PaidFeatureGate>
       )}
@@ -176,6 +198,27 @@ export default function YaskawaDriveTools() {
             categoryKey="group"
             categoryLabel="Groups"
             searchPlaceholder="Search parameters..."
+            renderRowActions={(param) => (
+              <button
+                onClick={() =>
+                  addEntry({
+                    type: "parameter-change",
+                    title: `Yaskawa parameter ${param.parameter} review`,
+                    summary: param.description,
+                    source: "Yaskawa parameter lookup",
+                    fields: {
+                      Parameter: param.parameter,
+                      Name: param.name,
+                      Range: param.range,
+                      Default: param.defaultValue,
+                    },
+                  })
+                }
+                className="px-2.5 py-1.5 rounded-md text-xs font-medium border border-[var(--border)] hover:bg-[var(--accent)]"
+              >
+                Add to report
+              </button>
+            )}
           />
         </PaidFeatureGate>
       )}

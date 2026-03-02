@@ -13,6 +13,12 @@ const tools = [
     description: "Guided fault-to-fix flow with targeted parameter checks",
   },
   {
+    href: "/dashboard/reports",
+    icon: "📝",
+    title: "Job Reports",
+    description: "Save findings and export/share field service summaries",
+  },
+  {
     href: "/dashboard/ppcl",
     icon: "🔧",
     title: "PPCL Tools",
