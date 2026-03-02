@@ -68,6 +68,64 @@ body {
   transform: translateY(0);
 }
 
+/* ── Global interactive hover/press polish ── */
+
+@media (hover: hover) and (pointer: fine) {
+  :is(
+    button,
+    a[href],
+    [role="button"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ) {
+    transition:
+      transform 180ms ease,
+      box-shadow 220ms ease,
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      opacity 180ms ease;
+  }
+
+  :is(
+    button,
+    a[href],
+    [role="button"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ):hover {
+    transform: translateY(-1px);
+  }
+
+  :is(
+    button,
+    a[href],
+    [role="button"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ):active {
+    transform: translateY(0) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    button,
+    a[href],
+    [role="button"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    .card-interactive
+  ) {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 /* ── Staggered fade-in for children ── */
 
 .stagger-children > * {
