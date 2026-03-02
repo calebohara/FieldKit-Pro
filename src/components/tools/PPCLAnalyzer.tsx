@@ -1,160 +1,102 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import {
+  lintPPCL,
+  RULE_DESCRIPTIONS,
+  ALL_HIGHLIGHT_KEYWORDS,
+  PPCL_RELATIONAL_OPS,
+  PPCL_LOGICAL_OPS,
+  type Severity,
+  type LintResult,
+} from "@/lib/ppcl/linter";
 
-// PPCL keywords for syntax highlighting
-const KEYWORDS = [
-  "IF", "THEN", "ELSE", "ENDIF", "DO", "ENDDO", "GOTO", "GOSUB", "RETURN",
-  "SET", "ENABLE", "DISABLE", "ON", "OFF", "AUTO", "START", "STOP",
-  "DEFINE", "LOCAL", "ADAPT", "ALARM", "EMERG", "TODMOD", "HOLMOD", "RUNMOD",
-  "DBSWIT", "LOOP", "TABLE", "SIDSID", "WAIT", "SAMPLE",
-  "EQ", "NE", "GT", "LT", "GE", "LE", "AND", "OR", "NOT", "XOR",
-  "ACT", "DEACT", "FAST", "SLOW", "MIN", "MAX", "DAY", "NIGHT",
-];
+// ─── Syntax Highlighting ─────────────────────────────────────
 
-const OPERATORS = ["\\+", "\\-", "\\*", "\\/", "=", "\\(", "\\)"];
+const KEYWORD_SET = new Set(ALL_HIGHLIGHT_KEYWORDS.map(k => k.toUpperCase()));
+const DOTTED_OPS = new Set([
+  ...PPCL_RELATIONAL_OPS,
+  ...PPCL_LOGICAL_OPS,
+  ".ROOT.",
+].map(o => o.toUpperCase()));
 
-interface AnalysisIssue {
-  line: number;
-  type: "error" | "warning" | "info";
-  message: string;
-}
+function highlightCode(code: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  // Match dotted operators, keywords, numbers, and arithmetic operators
+  const pattern = new RegExp(
+    `(\\.(?:EQ|NE|GT|LT|GE|LE|AND|OR|NAND|XOR|ROOT)\\.)|(\\b(?:${ALL_HIGHLIGHT_KEYWORDS.join("|")})\\b)|(\\b\\d+\\.?\\d*\\b)|([+\\-*/=()><,&])`,
+    "gi"
+  );
 
-interface AnalysisResult {
-  issues: AnalysisIssue[];
-  points: string[];
-  lineCount: number;
-}
+  let lastIndex = 0;
+  let match;
 
-// Analyze PPCL code for common issues
-function analyzePPCL(code: string): AnalysisResult {
-  const lines = code.split("\n");
-  const issues: AnalysisIssue[] = [];
-  const points = new Set<string>();
-
-  let ifCount = 0;
-  let doCount = 0;
-  let gosubWithoutReturn = false;
-  let hasReturn = false;
-
-  lines.forEach((line, idx) => {
-    const lineNum = idx + 1;
-    const trimmed = line.trim().toUpperCase();
-
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith("C ") || trimmed.startsWith("C\t")) return;
-
-    // Strip line numbers from start (PPCL uses line numbers like "01000 IF...")
-    const withoutLineNum = trimmed.replace(/^\d+\s+/, "");
-
-    // Track IF/ENDIF balance
-    if (/\bIF\b/.test(withoutLineNum) && /\bTHEN\b/.test(withoutLineNum)) {
-      ifCount++;
-    }
-    if (/\bENDIF\b/.test(withoutLineNum)) {
-      ifCount--;
-      if (ifCount < 0) {
-        issues.push({ line: lineNum, type: "error", message: "ENDIF without matching IF" });
-        ifCount = 0;
-      }
+  while ((match = pattern.exec(code)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={`t${lastIndex}`} className="text-sky-300">
+          {code.slice(lastIndex, match.index)}
+        </span>
+      );
     }
 
-    // Track DO/ENDDO balance
-    if (/\bDO\b/.test(withoutLineNum) && !/\bENDDO\b/.test(withoutLineNum)) {
-      doCount++;
-    }
-    if (/\bENDDO\b/.test(withoutLineNum)) {
-      doCount--;
-      if (doCount < 0) {
-        issues.push({ line: lineNum, type: "error", message: "ENDDO without matching DO" });
-        doCount = 0;
-      }
-    }
-
-    // Track GOSUB/RETURN
-    if (/\bGOSUB\b/.test(withoutLineNum)) {
-      gosubWithoutReturn = true;
-    }
-    if (/\bRETURN\b/.test(withoutLineNum)) {
-      hasReturn = true;
-    }
-
-    // Detect point references (typical format: "POINTNAME" or references after SET, ENABLE, etc.)
-    // PPCL points are typically uppercase identifiers, often with dots or hyphens
-    const pointPattern = /\b([A-Z][A-Z0-9]*(?:[._-][A-Z0-9]+)+)\b/g;
-    let match;
-    while ((match = pointPattern.exec(trimmed)) !== null) {
-      points.add(match[1]);
-    }
-
-    // Check for potential line number issues (duplicate or out of order)
-    const lineNumMatch = line.match(/^(\d+)\s/);
-    if (lineNumMatch) {
-      const num = parseInt(lineNumMatch[1]);
-      if (num % 10 !== 0) {
-        issues.push({
-          line: lineNum,
-          type: "warning",
-          message: `Line number ${num} is not a multiple of 10 — may cause insertion difficulties`,
-        });
-      }
+    if (match[1]) {
+      // Dotted operator (.EQ., .AND., etc.)
+      parts.push(
+        <span key={`d${match.index}`} className="text-rose-400 font-semibold">
+          {match[0]}
+        </span>
+      );
+    } else if (match[2]) {
+      // Keyword/command
+      parts.push(
+        <span key={`k${match.index}`} className="text-violet-400 font-semibold">
+          {match[0]}
+        </span>
+      );
+    } else if (match[3]) {
+      // Number
+      parts.push(
+        <span key={`n${match.index}`} className="text-amber-400">
+          {match[0]}
+        </span>
+      );
+    } else if (match[4]) {
+      // Operator
+      parts.push(
+        <span key={`o${match.index}`} className="text-rose-400">
+          {match[0]}
+        </span>
+      );
     }
 
-    // Check for very long lines
-    if (line.length > 80) {
-      issues.push({
-        line: lineNum,
-        type: "warning",
-        message: "Line exceeds 80 characters — may cause issues on some controllers",
-      });
-    }
-  });
-
-  // End-of-file checks
-  if (ifCount > 0) {
-    issues.push({
-      line: lines.length,
-      type: "error",
-      message: `${ifCount} unclosed IF statement${ifCount > 1 ? "s" : ""} — missing ENDIF`,
-    });
-  }
-  if (doCount > 0) {
-    issues.push({
-      line: lines.length,
-      type: "error",
-      message: `${doCount} unclosed DO loop${doCount > 1 ? "s" : ""} — missing ENDDO`,
-    });
-  }
-  if (gosubWithoutReturn && !hasReturn) {
-    issues.push({
-      line: lines.length,
-      type: "warning",
-      message: "GOSUB found but no RETURN statement — subroutine may not return properly",
-    });
+    lastIndex = pattern.lastIndex;
   }
 
-  return {
-    issues,
-    points: Array.from(points).sort(),
-    lineCount: lines.filter((l) => l.trim()).length,
-  };
+  if (lastIndex < code.length) {
+    parts.push(
+      <span key={`r${lastIndex}`} className="text-sky-300">
+        {code.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  return <>{parts}</>;
 }
 
-// Apply syntax highlighting to a line of PPCL code
 function highlightLine(line: string): React.ReactNode {
-  // Build a regex that matches keywords, strings, numbers, comments, and operators
-  const keywordPattern = `\\b(${KEYWORDS.join("|")})\\b`;
-  const numberPattern = `\\b(\\d+\\.?\\d*)\\b`;
-  const commentPattern = `(^\\s*C\\s.*)`;
-  const operatorPattern = `(${OPERATORS.join("|")})`;
-  const lineNumPattern = `^(\\d+)(\\s)`;
-
-  // Check if line is a comment
-  if (/^\s*C\s/i.test(line)) {
-    return <span className="text-emerald-500 italic">{line}</span>;
+  // Full-line comment
+  const commentMatch = line.match(/^(\s*\d*\s*)(C\s.*)$/i);
+  if (commentMatch) {
+    return (
+      <>
+        <span className="text-[var(--muted-foreground)]">{commentMatch[1]}</span>
+        <span className="text-emerald-500 italic">{commentMatch[2]}</span>
+      </>
+    );
   }
 
-  // Highlight line number prefix
+  // Line number prefix
   const lineNumMatch = line.match(/^(\d+)(\s+)(.*)/);
   if (lineNumMatch) {
     return (
@@ -169,97 +111,141 @@ function highlightLine(line: string): React.ReactNode {
   return highlightCode(line);
 }
 
-function highlightCode(code: string): React.ReactNode {
-  const parts: React.ReactNode[] = [];
-  const pattern = new RegExp(
-    `(\\b(?:${KEYWORDS.join("|")})\\b)|(\\b\\d+\\.?\\d*\\b)|([+\\-*/=()><])`,
-    "gi"
-  );
+// ─── Severity Styling ────────────────────────────────────────
 
-  let lastIndex = 0;
-  let match;
+const SEVERITY_CONFIG: Record<Severity, { bg: string; border: string; text: string; icon: string; label: string }> = {
+  error:   { bg: "bg-red-500/10",   border: "border-red-500/30",   text: "text-red-400",   icon: "⛔", label: "Error" },
+  warning: { bg: "bg-amber-500/10", border: "border-amber-500/30", text: "text-amber-400", icon: "⚠️", label: "Warning" },
+  info:    { bg: "bg-blue-500/10",  border: "border-blue-500/30",  text: "text-blue-400",  icon: "ℹ️", label: "Info" },
+};
 
-  while ((match = pattern.exec(code)) !== null) {
-    // Add text before match
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={`t${lastIndex}`} className="text-sky-300">
-          {code.slice(lastIndex, match.index)}
-        </span>
-      );
-    }
+// ─── Sample Code ─────────────────────────────────────────────
 
-    if (match[1]) {
-      // Keyword
-      parts.push(
-        <span key={`k${match.index}`} className="text-violet-400 font-semibold">
-          {match[0]}
-        </span>
-      );
-    } else if (match[2]) {
-      // Number
-      parts.push(
-        <span key={`n${match.index}`} className="text-amber-400">
-          {match[0]}
-        </span>
-      );
-    } else if (match[3]) {
-      // Operator
-      parts.push(
-        <span key={`o${match.index}`} className="text-rose-400">
-          {match[0]}
-        </span>
-      );
-    }
+const SAMPLE_CODE = `1000 C --- AHU-1 Supply Fan Control ---
+1010 C Written for demonstration purposes
+1020 IF (OATEMP.GT.85.0) THEN ON(SFAN1)
+1030 IF (OATEMP.LT.65.0) THEN OFF(SFAN1)
+1040 IF (SFAN1.EQ.ON) THEN ENABLE(2000,2100)
+1050 ELSE DISABL(2000,2100)
+1060 GOSUB(3000)
+1070 C
+2000 C --- Cooling Sequence ---
+2010 IF (SPACE1.GT.74.0) THEN ON(COOL1)
+2020 IF (SPACE1.LT.72.0) THEN OFF(COOL1)
+2100 C --- End Cooling ---
+3000 C --- Alarm Check Subroutine ---
+3010 IF (SFAN1.EQ.ON.AND.PRFON.NE.ON) THEN ALARM(SFAN1)
+3020 RETURN`;
 
-    lastIndex = pattern.lastIndex;
-  }
-
-  // Remaining text
-  if (lastIndex < code.length) {
-    parts.push(
-      <span key={`r${lastIndex}`} className="text-sky-300">
-        {code.slice(lastIndex)}
-      </span>
-    );
-  }
-
-  return <>{parts}</>;
-}
+// ─── Component ───────────────────────────────────────────────
 
 export default function PPCLAnalyzer() {
   const [code, setCode] = useState("");
+  const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
 
-  const analysis = useMemo(() => {
+  const analysis: LintResult | null = useMemo(() => {
     if (!code.trim()) return null;
-    return analyzePPCL(code);
+    return lintPPCL(code);
   }, [code]);
+
+  const filteredIssues = useMemo(() => {
+    if (!analysis) return [];
+    if (severityFilter === "all") return analysis.issues;
+    return analysis.issues.filter(i => i.severity === severityFilter);
+  }, [analysis, severityFilter]);
+
+  const errorCount = analysis?.issues.filter(i => i.severity === "error").length ?? 0;
+  const warningCount = analysis?.issues.filter(i => i.severity === "warning").length ?? 0;
+  const infoCount = analysis?.issues.filter(i => i.severity === "info").length ?? 0;
 
   return (
     <div className="space-y-6">
       {/* Code input */}
       <div>
-        <label htmlFor="ppcl-code" className="block text-sm font-medium mb-2">
-          Paste your PPCL code
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label htmlFor="ppcl-code" className="block text-sm font-medium">
+            Paste your PPCL code
+          </label>
+          {!code && (
+            <button
+              onClick={() => setCode(SAMPLE_CODE)}
+              className="text-xs text-[var(--primary)] hover:underline"
+            >
+              Load example
+            </button>
+          )}
+        </div>
         <textarea
           id="ppcl-code"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder={"01000 IF (TEMP.SPACE GT 74) THEN ON(COOL.VLV)\n01010 ELSE OFF(COOL.VLV)\n01020 ENDIF"}
-          rows={12}
-          className="w-full px-4 py-3 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] font-mono text-sm resize-y"
+          placeholder={"1000 C --- AHU-1 Supply Fan Control ---\n1010 IF (OATEMP.GT.85.0) THEN ON(SFAN1)\n1020 IF (OATEMP.LT.65.0) THEN OFF(SFAN1)"}
+          rows={14}
+          className="w-full px-4 py-3 rounded-lg bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] font-mono text-sm resize-y"
+          spellCheck={false}
         />
       </div>
 
       {analysis && (
         <>
+          {/* Summary bar */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm">
+              <span className="text-[var(--muted-foreground)]">Lines:</span>
+              <span className="font-medium">{analysis.lineCount}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm">
+              <span className="text-[var(--muted-foreground)]">Comments:</span>
+              <span className="font-medium">{analysis.commentCount}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm">
+              <span className="text-[var(--muted-foreground)]">Points:</span>
+              <span className="font-medium">{analysis.points.length}</span>
+            </div>
+            <div className="flex-1" />
+            {errorCount > 0 && (
+              <button
+                onClick={() => setSeverityFilter(severityFilter === "error" ? "all" : "error")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  severityFilter === "error" ? "bg-red-500/20 border-red-500/50" : "bg-red-500/10 border-red-500/30"
+                } border text-red-400`}
+              >
+                {errorCount} error{errorCount !== 1 ? "s" : ""}
+              </button>
+            )}
+            {warningCount > 0 && (
+              <button
+                onClick={() => setSeverityFilter(severityFilter === "warning" ? "all" : "warning")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  severityFilter === "warning" ? "bg-amber-500/20 border-amber-500/50" : "bg-amber-500/10 border-amber-500/30"
+                } border text-amber-400`}
+              >
+                {warningCount} warning{warningCount !== 1 ? "s" : ""}
+              </button>
+            )}
+            {infoCount > 0 && (
+              <button
+                onClick={() => setSeverityFilter(severityFilter === "info" ? "all" : "info")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  severityFilter === "info" ? "bg-blue-500/20 border-blue-500/50" : "bg-blue-500/10 border-blue-500/30"
+                } border text-blue-400`}
+              >
+                {infoCount} info
+              </button>
+            )}
+            {analysis.issues.length === 0 && (
+              <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm">
+                All checks passed
+              </div>
+            )}
+          </div>
+
           {/* Syntax highlighted output */}
           <div>
             <h3 className="text-sm font-medium mb-2">Highlighted Code</h3>
             <pre className="p-4 rounded-lg bg-[#0d1117] border border-[var(--border)] overflow-x-auto text-sm leading-6">
               {code.split("\n").map((line, idx) => (
-                <div key={idx}>
+                <div key={idx} className="hover:bg-white/5 -mx-4 px-4">
                   <span className="select-none text-[var(--muted-foreground)] mr-4 inline-block w-6 text-right text-xs">
                     {idx + 1}
                   </span>
@@ -269,46 +255,54 @@ export default function PPCLAnalyzer() {
             </pre>
           </div>
 
-          {/* Issues */}
-          <div>
-            <h3 className="text-sm font-medium mb-2">
-              Analysis ({analysis.issues.length} issue{analysis.issues.length !== 1 ? "s" : ""} found)
-            </h3>
-            {analysis.issues.length === 0 ? (
-              <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm">
-                No issues detected — code looks clean.
-              </div>
-            ) : (
+          {/* Lint Issues */}
+          {filteredIssues.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium mb-2">
+                Lint Results ({filteredIssues.length} issue{filteredIssues.length !== 1 ? "s" : ""})
+              </h3>
               <div className="space-y-2">
-                {analysis.issues.map((issue, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-3 rounded-lg border text-sm ${
-                      issue.type === "error"
-                        ? "bg-red-500/10 border-red-500/30 text-red-400"
-                        : issue.type === "warning"
-                        ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                        : "bg-blue-500/10 border-blue-500/30 text-blue-400"
-                    }`}
-                  >
-                    <span className="font-medium">Line {issue.line}:</span>{" "}
-                    {issue.message}
-                  </div>
-                ))}
+                {filteredIssues.map((issue, idx) => {
+                  const sev = SEVERITY_CONFIG[issue.severity];
+                  const ruleInfo = RULE_DESCRIPTIONS[issue.rule];
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-lg border text-sm ${sev.bg} ${sev.border} ${sev.text}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="shrink-0">{sev.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-white/10">
+                              {issue.rule}
+                            </span>
+                            {ruleInfo && (
+                              <span className="text-xs opacity-70">
+                                {ruleInfo.category}
+                              </span>
+                            )}
+                            <span className="text-xs opacity-60">
+                              Line {issue.line}
+                              {issue.ppclLine ? ` (PPCL ${issue.ppclLine})` : ""}
+                            </span>
+                          </div>
+                          <p className="mt-1">{issue.message}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Referenced Points */}
-          <div>
-            <h3 className="text-sm font-medium mb-2">
-              Referenced Points ({analysis.points.length})
-            </h3>
-            {analysis.points.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">
-                No point references detected.
-              </p>
-            ) : (
+          {analysis.points.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium mb-2">
+                Referenced Points ({analysis.points.length})
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {analysis.points.map((point) => (
                   <span
@@ -319,15 +313,8 @@ export default function PPCLAnalyzer() {
                   </span>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Summary */}
-          <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm text-[var(--muted-foreground)]">
-            {analysis.lineCount} non-empty lines · {analysis.points.length} point
-            references · {analysis.issues.filter((i) => i.type === "error").length} errors
-            · {analysis.issues.filter((i) => i.type === "warning").length} warnings
-          </div>
+            </div>
+          )}
         </>
       )}
     </div>
