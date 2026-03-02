@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
+
+/* ─── Lazy-load WebGL glass (client only, no SSR) ─── */
+const GlassNav = dynamic(() => import("@/components/glass/GlassNav"), {
+  ssr: false,
+});
 
 /* ─── All nav items ─── */
 const allNavItems = [
@@ -338,12 +344,14 @@ export default function MobileNav() {
           style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
         >
           <div
-            className="liquid-glass flex items-center justify-around py-1 px-1 rounded-[26px]"
+            className="liquid-glass relative flex items-center justify-around py-1 px-1 rounded-[26px]"
             style={{
               backdropFilter: "blur(40px) saturate(200%) brightness(1.05)",
               WebkitBackdropFilter: "blur(40px) saturate(200%) brightness(1.05)",
             }}
           >
+            {/* WebGL refractive glass overlay */}
+            <GlassNav ior={1.45} opacity={0.7} borderRadius={26} />
             {primaryItems.map((item) => {
               const isActive =
                 item.href === "/dashboard"
