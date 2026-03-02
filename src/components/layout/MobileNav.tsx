@@ -29,25 +29,127 @@ function usePlatform() {
     if (/android/.test(ua)) {
       setPlatform("android");
     }
-    // Default to iOS style for iPhones, iPads, Macs, and desktops
   }, []);
   return platform;
 }
 
-/* ─── Nav Item ─── */
-function NavItem({
+/* ─── iOS Liquid Glass Nav Item ─── */
+function GlassNavItem({
   href,
   label,
   icon,
   isActive,
-  platform,
   onClick,
 }: {
   href: string;
   label: string;
   icon: string;
   isActive: boolean;
-  platform: "ios" | "android";
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`relative flex flex-col items-center justify-center py-2 px-2 min-w-[3.2rem] rounded-2xl transition-all duration-300 ${
+        isActive
+          ? "text-white"
+          : "text-white/60 active:scale-95"
+      }`}
+    >
+      {/* Active sub-pill — darker frosted glass behind active item */}
+      {isActive && (
+        <span
+          className="absolute inset-0 rounded-2xl"
+          style={{
+            background: "rgba(255, 255, 255, 0.12)",
+            boxShadow:
+              "inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.2)",
+          }}
+        />
+      )}
+      <span
+        className={`text-[18px] mb-0.5 relative z-10 transition-transform duration-200 ${
+          isActive ? "scale-110" : ""
+        }`}
+      >
+        {icon}
+      </span>
+      <span
+        className={`text-[9px] tracking-wide relative z-10 ${
+          isActive ? "font-semibold" : "font-normal"
+        }`}
+      >
+        {label}
+      </span>
+    </Link>
+  );
+}
+
+/* ─── iOS Liquid Glass More Button ─── */
+function GlassMoreButton({
+  isActive,
+  moreOpen,
+  activeInOverflow,
+  overflowIcon,
+  overflowLabel,
+  onClick,
+}: {
+  isActive: boolean;
+  moreOpen: boolean;
+  activeInOverflow: boolean;
+  overflowIcon: string;
+  overflowLabel: string;
+  onClick: () => void;
+}) {
+  const showActive = moreOpen || activeInOverflow;
+  return (
+    <button
+      onClick={onClick}
+      className={`relative flex flex-col items-center justify-center py-2 px-2 min-w-[3.2rem] rounded-2xl transition-all duration-300 ${
+        showActive ? "text-white" : "text-white/60 active:scale-95"
+      }`}
+    >
+      {showActive && (
+        <span
+          className="absolute inset-0 rounded-2xl"
+          style={{
+            background: "rgba(255, 255, 255, 0.12)",
+            boxShadow:
+              "inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.2)",
+          }}
+        />
+      )}
+      <span
+        className={`text-[18px] mb-0.5 relative z-10 transition-transform duration-300 ${
+          moreOpen ? "rotate-45 scale-110" : ""
+        }`}
+      >
+        {activeInOverflow && !moreOpen ? overflowIcon : "⋯"}
+      </span>
+      <span
+        className={`text-[9px] tracking-wide relative z-10 ${
+          showActive ? "font-semibold" : "font-normal"
+        }`}
+      >
+        {activeInOverflow && !moreOpen ? overflowLabel : "More"}
+      </span>
+    </button>
+  );
+}
+
+/* ─── Android Nav Item ─── */
+function AndroidNavItem({
+  href,
+  label,
+  icon,
+  isActive,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  isActive: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -60,12 +162,7 @@ function NavItem({
           : "text-[var(--muted-foreground)] active:scale-95"
       }`}
     >
-      {/* iOS: glowing dot indicator */}
-      {platform === "ios" && isActive && (
-        <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--primary)] shadow-[0_0_6px_var(--primary)]" />
-      )}
-      {/* Android: pill indicator behind icon */}
-      {platform === "android" && isActive && (
+      {isActive && (
         <span className="absolute top-1.5 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[var(--primary)]/15" />
       )}
       <span
@@ -134,34 +231,43 @@ function MoreSheet({
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className={`md:hidden fixed left-3 right-3 z-[60] transition-all duration-300 ease-out ${
+        className={`md:hidden fixed z-[60] transition-all duration-300 ease-out ${
           open
             ? "translate-y-0 opacity-100"
             : "translate-y-8 opacity-0 pointer-events-none"
         } ${
           platform === "ios"
-            ? "bottom-[calc(4.5rem+env(safe-area-inset-bottom))]"
-            : "bottom-[calc(4.25rem+env(safe-area-inset-bottom))]"
+            ? "left-4 right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))]"
+            : "left-3 right-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))]"
         }`}
       >
         <div
-          className={`overflow-hidden ${
-            platform === "ios"
-              ? "rounded-2xl border border-white/[0.08] shadow-[0_8px_40px_rgba(0,0,0,0.5)]"
-              : "rounded-xl border border-[var(--border)] shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
-          }`}
+          className="overflow-hidden rounded-2xl"
           style={
             platform === "ios"
               ? {
-                  background: "rgba(30, 30, 40, 0.75)",
-                  backdropFilter: "blur(40px) saturate(180%)",
-                  WebkitBackdropFilter: "blur(40px) saturate(180%)",
+                  background: "rgba(40, 36, 60, 0.65)",
+                  backdropFilter: "blur(40px) saturate(200%)",
+                  WebkitBackdropFilter: "blur(40px) saturate(200%)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  boxShadow:
+                    "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)",
                 }
-              : { background: "rgba(28, 28, 32, 0.97)" }
+              : {
+                  background: "rgba(28, 28, 32, 0.97)",
+                  border: "1px solid var(--border)",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+                }
           }
         >
           <div className="p-2">
-            <p className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-[var(--muted-foreground)] font-medium">
+            <p
+              className={`px-3 py-1.5 text-[10px] uppercase tracking-widest font-medium ${
+                platform === "ios"
+                  ? "text-white/40"
+                  : "text-[var(--muted-foreground)]"
+              }`}
+            >
               More Tools
             </p>
             {items.map((item) => {
@@ -175,17 +281,29 @@ function MoreSheet({
                   href={item.href}
                   onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
-                    isActive
-                      ? "bg-[var(--primary)]/10 text-[var(--primary)]"
-                      : "text-[var(--foreground)] active:bg-white/5"
+                    platform === "ios"
+                      ? isActive
+                        ? "bg-white/10 text-white"
+                        : "text-white/80 active:bg-white/5"
+                      : isActive
+                        ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+                        : "text-[var(--foreground)] active:bg-white/5"
                   }`}
                 >
                   <span className="text-xl">{item.icon}</span>
-                  <span className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>
+                  <span
+                    className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}
+                  >
                     {item.label}
                   </span>
                   {isActive && (
-                    <span className="ml-auto text-xs text-[var(--primary)]">
+                    <span
+                      className={`ml-auto text-xs ${
+                        platform === "ios"
+                          ? "text-white/50"
+                          : "text-[var(--primary)]"
+                      }`}
+                    >
                       Current
                     </span>
                   )}
@@ -212,6 +330,71 @@ export default function MobileNav() {
       : pathname.startsWith(item.href)
   );
 
+  // Find overflow item details for smart More button
+  const activeOverflowItem = overflowItems.find((item) =>
+    item.href === "/dashboard"
+      ? pathname === "/dashboard"
+      : pathname.startsWith(item.href)
+  );
+
+  if (platform === "ios") {
+    return (
+      <>
+        <MoreSheet
+          open={moreOpen}
+          onClose={() => setMoreOpen(false)}
+          items={overflowItems}
+          pathname={pathname}
+          platform={platform}
+        />
+
+        {/* iOS Liquid Glass floating pill nav */}
+        <nav
+          className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[env(safe-area-inset-bottom)]"
+          style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
+        >
+          <div
+            className="flex items-center justify-around py-1 px-1 rounded-[26px]"
+            style={{
+              background: "rgba(40, 36, 60, 0.55)",
+              backdropFilter: "blur(40px) saturate(200%)",
+              WebkitBackdropFilter: "blur(40px) saturate(200%)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow:
+                "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 0.5px rgba(255,255,255,0.05)",
+            }}
+          >
+            {primaryItems.map((item) => {
+              const isActive =
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname.startsWith(item.href);
+              return (
+                <GlassNavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  isActive={isActive}
+                />
+              );
+            })}
+
+            <GlassMoreButton
+              isActive={moreOpen || activeInOverflow}
+              moreOpen={moreOpen}
+              activeInOverflow={activeInOverflow}
+              overflowIcon={activeOverflowItem?.icon || "⋯"}
+              overflowLabel={activeOverflowItem?.label || "More"}
+              onClick={() => setMoreOpen((o) => !o)}
+            />
+          </div>
+        </nav>
+      </>
+    );
+  }
+
+  // Android Material nav
   return (
     <>
       <MoreSheet
@@ -223,23 +406,11 @@ export default function MobileNav() {
       />
 
       <nav
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 transition-colors duration-300 ${
-          platform === "ios"
-            ? "border-t border-white/[0.06]"
-            : "border-t border-[var(--border)]"
-        }`}
-        style={
-          platform === "ios"
-            ? {
-                background: "rgba(20, 20, 28, 0.55)",
-                backdropFilter: "blur(28px) saturate(180%)",
-                WebkitBackdropFilter: "blur(28px) saturate(180%)",
-              }
-            : {
-                background: "rgba(18, 18, 22, 0.95)",
-                boxShadow: "0 -2px 16px rgba(0,0,0,0.3)",
-              }
-        }
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)]"
+        style={{
+          background: "rgba(18, 18, 22, 0.95)",
+          boxShadow: "0 -2px 16px rgba(0,0,0,0.3)",
+        }}
       >
         <div className="flex items-center justify-around px-1 pb-[env(safe-area-inset-bottom)]">
           {primaryItems.map((item) => {
@@ -248,13 +419,12 @@ export default function MobileNav() {
                 ? pathname === "/dashboard"
                 : pathname.startsWith(item.href);
             return (
-              <NavItem
+              <AndroidNavItem
                 key={item.href}
                 href={item.href}
                 label={item.label}
                 icon={item.icon}
                 isActive={isActive}
-                platform={platform}
               />
             );
           })}
@@ -268,10 +438,7 @@ export default function MobileNav() {
                 : "text-[var(--muted-foreground)] active:scale-95"
             }`}
           >
-            {platform === "ios" && (moreOpen || activeInOverflow) && (
-              <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--primary)] shadow-[0_0_6px_var(--primary)]" />
-            )}
-            {platform === "android" && (moreOpen || activeInOverflow) && (
+            {(moreOpen || activeInOverflow) && (
               <span className="absolute top-1.5 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[var(--primary)]/15" />
             )}
             <span
@@ -280,11 +447,7 @@ export default function MobileNav() {
               }`}
             >
               {activeInOverflow && !moreOpen
-                ? overflowItems.find((item) =>
-                    item.href === "/dashboard"
-                      ? pathname === "/dashboard"
-                      : pathname.startsWith(item.href)
-                  )?.icon || "⋯"
+                ? activeOverflowItem?.icon || "⋯"
                 : "⋯"}
             </span>
             <span
@@ -293,11 +456,7 @@ export default function MobileNav() {
               }`}
             >
               {activeInOverflow && !moreOpen
-                ? overflowItems.find((item) =>
-                    item.href === "/dashboard"
-                      ? pathname === "/dashboard"
-                      : pathname.startsWith(item.href)
-                  )?.label || "More"
+                ? activeOverflowItem?.label || "More"
                 : "More"}
             </span>
           </button>
