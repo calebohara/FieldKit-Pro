@@ -2,33 +2,28 @@
  * PPCL Command Reference Data
  *
  * Powers Process Control Language (PPCL) is the programming language used
- * in Johnson Controls Inc. (JCI) Metasys and legacy building automation
- * systems. This file provides a structured reference for all major PPCL
- * commands used in field engineering and commissioning work.
+ * in Siemens APOGEE building automation systems. This file provides a
+ * structured reference for all PPCL commands from the official manual.
  *
- * Each entry follows the PPCLCommand interface, providing:
- *   - command:     The PPCL keyword or operator exactly as written in code
- *   - syntax:      Formal syntax with placeholder arguments in angle brackets
- *   - description: Plain-English explanation of what the command does
- *   - example:     A realistic code snippet showing typical usage in a program
- *   - category:    Logical grouping for UI filtering and documentation
+ * Source: APOGEE PPCL User's Manual (125-1896, Rev. 6, May 2006)
+ * - Chapter 1: Programming Methodology (operators, functions, resident points)
+ * - Chapter 3: Command Syntax (all commands)
+ * - Appendix A: PPCL Reserved Word List
  *
- * Categories map to the six functional areas of PPCL programming:
- *   "Program Flow"    - Control structures, branching, subroutines
- *   "Math/Logic"      - Arithmetic operators and comparison operators
- *   "Point Operations"- Reading and writing point values and states
- *   "Time/Schedule"   - TOD scheduling, holiday, and run-mode commands
- *   "Communication"   - Inter-panel communication and data exchange
- *   "System"          - Variable declarations, alarms, and system directives
+ * Categories map to the functional areas of PPCL programming:
+ *   "Program Flow"     - IF/THEN/ELSE, GOTO, GOSUB, RETURN, ACT/DEACT, ENABLE/DISABL
+ *   "Point Control"    - ON, OFF, SET, AUTO, FAST, SLOW, ALARM, RELEAS
+ *   "Operators"        - Relational (.EQ., .GT., etc.), logical (.AND., .OR., etc.)
+ *   "Math/Functions"   - Arithmetic functions (ATN, COS, SQRT, etc.), special functions
+ *   "Time/Schedule"    - TOD, TODMOD, TODSET, LOOP, WAIT, SAMPLE, SSTO, DAY, NIGHT, HOLIDA
+ *   "System"           - DEFINE, LOCAL, ONPWRT, STATE, PDL commands, DC commands, ADAPTM/S
+ *   "Communication"    - DBSWIT, OIP, DISALM, ENALM, DISCOV, ENCOV, DPHONE, EPHONE
  */
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
-/**
- * Represents a single PPCL command with its full reference documentation.
- */
 export interface PPCLCommand {
-  /** The PPCL keyword or operator as it appears in source code (e.g. "IF", "SET", "+") */
+  /** The PPCL keyword or operator as it appears in source code */
   command: string;
 
   /** Formal syntax string using angle-bracket placeholders for arguments */
@@ -43,579 +38,798 @@ export interface PPCLCommand {
   /** Functional category used for grouping and filtering in the UI */
   category:
     | "Program Flow"
-    | "Math/Logic"
-    | "Point Operations"
+    | "Point Control"
+    | "Operators"
+    | "Math/Functions"
     | "Time/Schedule"
-    | "Communication"
-    | "System";
+    | "System"
+    | "Communication";
 }
 
-// ─── Command Definitions ──────────────────────────────────────────────────────
+// ─── Command Definitions (Chapter 3 — Command Syntax) ────────────────────────
 
 export const ppclCommands: PPCLCommand[] = [
-  // ── Program Flow ────────────────────────────────────────────────────────────
+  // ── Program Flow ──────────────────────────────────────────────────────────
 
   {
-    command: "IF",
-    syntax: "IF <condition> THEN",
+    command: "IF/THEN/ELSE",
+    syntax: "IF (<condition>) THEN <action> ELSE <action>",
     description:
-      "Begins a conditional block. The statements between IF/THEN and ENDIF (or ELSE) " +
-      "execute only when the condition evaluates to true. Conditions use comparison " +
-      "operators (EQ, NE, GT, LT, GE, LE) and can be chained with AND/OR.",
-    example:
-      "IF ZN-TEMP GT 72.0 THEN\n" +
-      "  SET CLG-VLV = 100.0\n" +
-      "ENDIF",
-    category: "Program Flow",
-  },
-  {
-    command: "THEN",
-    syntax: "IF <condition> THEN",
-    description:
-      "Required keyword that terminates the condition clause of an IF statement. " +
-      "All statements following THEN (until ELSE or ENDIF) execute when the IF " +
-      "condition is true.",
-    example:
-      "IF OA-TEMP LT 55.0 THEN\n" +
-      "  SET HTG-VLV = 75.0\n" +
-      "ENDIF",
-    category: "Program Flow",
-  },
-  {
-    command: "ELSE",
-    syntax: "ELSE",
-    description:
-      "Optional clause within an IF/ENDIF block. Statements following ELSE execute " +
-      "when the IF condition is false. Only one ELSE clause is permitted per IF block.",
-    example:
-      "IF OCC-MODE EQ 1 THEN\n" +
-      "  SET SETPT = 70.0\n" +
-      "ELSE\n" +
-      "  SET SETPT = 60.0\n" +
-      "ENDIF",
-    category: "Program Flow",
-  },
-  {
-    command: "ENDIF",
-    syntax: "ENDIF",
-    description:
-      "Closes an IF/THEN or IF/THEN/ELSE conditional block. Every IF statement " +
-      "must have a corresponding ENDIF. Nesting is supported up to the controller's " +
-      "maximum nesting depth.",
-    example:
-      "IF FAN-STATUS EQ ON THEN\n" +
-      "  SET VFD-SPD = 50.0\n" +
-      "ENDIF",
-    category: "Program Flow",
-  },
-  {
-    command: "DO",
-    syntax: "DO <count>",
-    description:
-      "Begins a counted loop block that repeats the enclosed statements a fixed " +
-      "number of times. The count may be a literal integer or a numeric point " +
-      "reference. Loops must be closed with ENDDO.",
-    example:
-      "DO 5\n" +
-      "  SET PULSE-OUT = ON\n" +
-      "  WAIT 0:00:02\n" +
-      "  SET PULSE-OUT = OFF\n" +
-      "  WAIT 0:00:02\n" +
-      "ENDDO",
-    category: "Program Flow",
-  },
-  {
-    command: "ENDDO",
-    syntax: "ENDDO",
-    description:
-      "Closes a DO loop block and returns execution to the DO statement for the " +
-      "next iteration. When the iteration count is exhausted, execution continues " +
-      "with the statement immediately after ENDDO.",
-    example:
-      "DO 3\n" +
-      "  SET ALARM-OUT = ON\n" +
-      "  WAIT 0:00:01\n" +
-      "  SET ALARM-OUT = OFF\n" +
-      "ENDDO",
+      "Conditional control statement. Evaluates a condition and executes the THEN action if true, " +
+      "or the optional ELSE action if false. PPCL uses single-line conditionals — there is no ENDIF. " +
+      "Conditions use dotted relational operators (.EQ., .GT., .LT., .GE., .LE., .NE.) and " +
+      "logical operators (.AND., .OR., .NAND., .XOR.). A single statement can incorporate up to " +
+      "16 combined relational and logical operators.",
+    example: "1010 IF (OATEMP.GT.85.0) THEN ON(SFAN1) ELSE OFF(SFAN1)",
     category: "Program Flow",
   },
   {
     command: "GOTO",
-    syntax: "GOTO <label>",
+    syntax: "GOTO line#",
     description:
-      "Unconditionally transfers program execution to the specified label within " +
-      "the same program. Labels are defined by placing a colon-suffixed identifier " +
-      "on its own line. Avoid using GOTO in place of structured loop constructs.",
-    example:
-      "IF FAULT-BIT EQ 1 THEN\n" +
-      "  GOTO FAULT_HANDLER\n" +
-      "ENDIF\n" +
-      "...\n" +
-      "FAULT_HANDLER:",
+      "Unconditionally transfers program execution to the specified line number. " +
+      "Design guidelines recommend GOTO should always transfer to a sequentially higher " +
+      "line number to prevent endless loops. If the target line does not exist, execution " +
+      "transfers to the next line after the specified number.",
+    example: "10 IF (FANRUN.GE.1000) THEN GOTO 50",
     category: "Program Flow",
   },
   {
     command: "GOSUB",
-    syntax: "GOSUB <label>",
+    syntax: "GOSUB line# pt1,...,pt15",
     description:
-      "Calls a subroutine at the specified label, saving the return address on the " +
-      "call stack. Execution continues at the label and returns to the statement " +
-      "after GOSUB when a RETURN statement is encountered.",
-    example:
-      "GOSUB CALC_DEWPOINT\n" +
-      "IF DEWPT GT 65.0 THEN\n" +
-      "  SET DEHUM-CMD = ON\n" +
-      "ENDIF",
+      "Transfers execution to a subroutine beginning at the specified line number, saving the " +
+      "return address. When a RETURN statement is encountered, execution resumes at the statement " +
+      "after the GOSUB. Parentheses around arguments are optional. Up to 15 point names or local " +
+      "variables can be passed to the subroutine. Each subroutine must end with RETURN.",
+    example: "1060 GOSUB 3000 SPACE1, CLGSET",
     category: "Program Flow",
   },
   {
     command: "RETURN",
     syntax: "RETURN",
     description:
-      "Returns execution from a subroutine to the statement following the most " +
-      "recent GOSUB call. Must be placed at the end of every subroutine block. " +
-      "Calling RETURN outside a subroutine terminates the program execution cycle.",
-    example:
-      "CALC_DEWPOINT:\n" +
-      "  LOCAL DEWPT\n" +
-      "  SET DEWPT = RH-SENSOR * 0.36 + OA-TEMP - 10.0\n" +
-      "RETURN",
+      "Returns execution from a subroutine to the statement following the most recent GOSUB call. " +
+      "Every subroutine must end with a RETURN statement. Calling RETURN outside a subroutine " +
+      "causes the program to restart from its first line.",
+    example: "3020 RETURN",
     category: "Program Flow",
   },
-
-  // ── Point Operations ─────────────────────────────────────────────────────────
-
   {
-    command: "SET",
-    syntax: "SET <point> = <value>",
+    command: "ACT",
+    syntax: "ACT(line1,...,line16)",
     description:
-      "Writes a value to a point. For analog points the value is a floating-point " +
-      "number; for binary points use ON/OFF or 1/0. SET can also write to local " +
-      "variables. The point must be defined and in the correct mode to accept writes.",
-    example: "SET CHW-VLV = 75.5",
-    category: "Point Operations",
+      "Activates (enables execution of) specified program lines. Up to 16 individual line numbers " +
+      "can be listed. A range of lines cannot be defined — each line must be specified individually. " +
+      "Lines deactivated with DEACT will begin executing again. ACT and ENABLE are interchangeable.",
+    example: "100 IF (TIME.GT.8:00.AND.TIME.LT.17:00) THEN ACT(120) ELSE DEACT(120)",
+    category: "Program Flow",
+  },
+  {
+    command: "DEACT",
+    syntax: "DEACT(line1,...,line16)",
+    description:
+      "Deactivates (disables execution of) specified program lines. Up to 16 individual line numbers " +
+      "can be listed. A range of lines cannot be defined — each line must be specified individually. " +
+      "Deactivated lines are skipped until reactivated with ACT.",
+    example: "1050 IF (SFAN1.EQ.OFF) THEN DEACT(2000, 2010, 2020)",
+    category: "Program Flow",
   },
   {
     command: "ENABLE",
-    syntax: "ENABLE <point>",
+    syntax: "ENABLE(line1,...,line16)",
     description:
-      "Places a binary or program point into the ENABLED state, allowing it to " +
-      "respond to normal control logic. Commonly used after a DISABLE command to " +
-      "restore normal operation of a point or program.",
-    example:
-      "IF MAINT-MODE EQ OFF THEN\n" +
-      "  ENABLE AHU-1-PGM\n" +
-      "ENDIF",
-    category: "Point Operations",
+      "Enables specified program lines for execution. Up to 16 individual line numbers can be listed. " +
+      "A range of lines cannot be defined — each line must be specified individually. " +
+      "ENABLE and ACT can be used interchangeably.",
+    example: "1040 IF (MODE.EQ.ON) THEN ENABLE(2000, 2010, 2020)",
+    category: "Program Flow",
   },
   {
-    command: "DISABLE",
-    syntax: "DISABLE <point>",
+    command: "DISABL",
+    syntax: "DISABL(line1,...,line16)",
     description:
-      "Places a binary or program point into the DISABLED state, preventing it from " +
-      "being changed by control logic. Used for maintenance lockouts or to inhibit " +
-      "a program from executing its control actions.",
-    example:
-      "IF FIRE-ALARM EQ ON THEN\n" +
-      "  DISABLE VENT-PGM\n" +
-      "ENDIF",
-    category: "Point Operations",
+      "Disables specified program lines from executing. Up to 16 individual line numbers can be listed. " +
+      "A range of lines cannot be defined — each line must be specified individually. " +
+      "Disabled lines are skipped until re-enabled with ENABLE.",
+    example: "1050 IF (MODE.EQ.OFF) THEN DISABL(2000, 2010, 2020)",
+    category: "Program Flow",
   },
+
+  // ── Point Control ─────────────────────────────────────────────────────────
+
   {
     command: "ON",
-    syntax: "SET <point> = ON",
+    syntax: "ON(<pt1>, ..., <pt16>)",
     description:
-      "Binary state constant representing the active/energized state of a binary " +
-      "point. Equivalent to the numeric value 1. Used as the right-hand side of a " +
-      "SET command or in condition comparisons.",
-    example: "SET EXHAUST-FAN = ON",
-    category: "Point Operations",
+      "Commands one or more points to the ON state. Up to 16 points can be turned on by a single " +
+      "command. Used for binary output points such as fans, pumps, and valves.",
+    example: "1010 IF (OATEMP.GT.85.0) THEN ON(SFAN1)",
+    category: "Point Control",
   },
   {
     command: "OFF",
-    syntax: "SET <point> = OFF",
+    syntax: "OFF(<pt1>, ..., <pt16>)",
     description:
-      "Binary state constant representing the inactive/de-energized state of a " +
-      "binary point. Equivalent to the numeric value 0. Used as the right-hand " +
-      "side of a SET command or in condition comparisons.",
-    example: "SET EXHAUST-FAN = OFF",
-    category: "Point Operations",
+      "Commands one or more points to the OFF state. Up to 16 points can be turned off by a single " +
+      "command. Used for binary output points such as fans, pumps, and valves.",
+    example: "1020 IF (OATEMP.LT.65.0) THEN OFF(SFAN1)",
+    category: "Point Control",
+  },
+  {
+    command: "SET",
+    syntax: "SET(value,pt1,...,pt15)",
+    description:
+      "Sets one or more points to a specified value. The value comes first, followed by up to " +
+      "15 point names. Value must be a decimal, logical point, or local variable (not an integer). " +
+      "An optional @prior parameter can set point priority. Note: direct assignment (point = value) " +
+      "is also valid PPCL syntax for single-point operations.",
+    example: "1030 SET(74.0, CLGSET)",
+    category: "Point Control",
   },
   {
     command: "AUTO",
-    syntax: "AUTO <point>",
+    syntax: "AUTO(<pt1>, ..., <pt16>)",
     description:
-      "Returns a point to automatic (program-controlled) mode after it has been " +
-      "manually overridden. In AUTO mode the point accepts writes from PPCL " +
-      "programs according to normal control logic priorities.",
-    example:
-      "IF OVERRIDE-TIMER EQ 0 THEN\n" +
-      "  AUTO CHW-VLV\n" +
-      "ENDIF",
-    category: "Point Operations",
+      "Returns one or more points to the automatic (program-controlled) state. " +
+      "Up to 16 points can be restored to auto by a single command. Removes manual overrides.",
+    example: "1040 AUTO(SFAN1, CHW1)",
+    category: "Point Control",
   },
   {
-    command: "START",
-    syntax: "START <point>",
+    command: "FAST",
+    syntax: "FAST(<pt1>, ..., <pt16>)",
     description:
-      "Issues a start command to a binary output point, typically a motor or fan. " +
-      "Equivalent to SET <point> = ON but semantically clearer for equipment " +
-      "control. Triggers associated start interlock logic if defined.",
-    example:
-      "IF ZN-TEMP GT COOLING-SETPT THEN\n" +
-      "  START AHU-1-FAN\n" +
-      "ENDIF",
-    category: "Point Operations",
+      "Commands one or more points to the FAST state. Typically used for multi-speed equipment " +
+      "such as fan motors. Up to 16 points per command.",
+    example: "1050 IF (OATEMP.GT.90.0) THEN FAST(SFAN1)",
+    category: "Point Control",
   },
   {
-    command: "STOP",
-    syntax: "STOP <point>",
+    command: "SLOW",
+    syntax: "SLOW(<pt1>, ..., <pt16>)",
     description:
-      "Issues a stop command to a binary output point. Equivalent to SET <point> = OFF " +
-      "but semantically clearer for equipment control. May trigger associated " +
-      "safe-state sequencing logic if configured on the point.",
-    example:
-      "IF OCC-MODE EQ UNOCCUPIED THEN\n" +
-      "  STOP AHU-1-FAN\n" +
-      "ENDIF",
-    category: "Point Operations",
+      "Commands one or more points to the SLOW state. Typically used for multi-speed equipment " +
+      "such as fan motors. Up to 16 points per command.",
+    example: "1060 IF (OATEMP.LT.75.0) THEN SLOW(SFAN1)",
+    category: "Point Control",
+  },
+  {
+    command: "ALARM",
+    syntax: "ALARM(<pt1>, ..., <pt16>)",
+    description:
+      "Places one or more points into the ALARM state. Used to generate alarm conditions " +
+      "for operator notification. Up to 16 points can be alarmed by a single command.",
+    example: "1070 IF (SFAN1.EQ.ON.AND.PRFON.NE.ON) THEN ALARM(SFAN1)",
+    category: "Point Control",
+  },
+  {
+    command: "NORMAL",
+    syntax: "NORMAL(<pt1>, ..., <pt16>)",
+    description:
+      "Returns one or more points to the NORMAL operating mode. Clears alarm conditions " +
+      "and restores standard operation. Up to 16 points per command.",
+    example: "1080 IF (SFAN1.EQ.ON.AND.PRFON.EQ.ON) THEN NORMAL(SFAN1)",
+    category: "Point Control",
+  },
+  {
+    command: "RELEAS",
+    syntax: "RELEAS(<pt1>, ..., <pt16>)",
+    description:
+      "Releases PPCL program control of one or more points, allowing other control sources " +
+      "(such as operator commands or other programs) to take precedence. Up to 16 points per command.",
+    example: "1090 IF (MAINT.EQ.ON) THEN RELEAS(SFAN1)",
+    category: "Point Control",
+  },
+  {
+    command: "HLIMIT",
+    syntax: "HLIMIT(value,pt1,...,pt15)",
+    description:
+      "Sets the high alarm limit for one or more points. The value comes first, followed by up to " +
+      "15 point names. Value must be a decimal, point name, or local variable (not an integer). " +
+      "When a point's value exceeds this limit, an alarm condition is generated.",
+    example: "1100 HLIMIT(100.0, OATEMP, SPACE1)",
+    category: "Point Control",
+  },
+  {
+    command: "LLIMIT",
+    syntax: "LLIMIT(value,pt1,...,pt15)",
+    description:
+      "Sets the low alarm limit for one or more points. The value comes first, followed by up to " +
+      "15 point names. Value must be a decimal, point name, or local variable (not an integer). " +
+      "When a point's value drops below this limit, an alarm condition is generated.",
+    example: "1110 LLIMIT(-20.0, OATEMP, SPACE1)",
+    category: "Point Control",
   },
 
-  // ── Math / Logic ─────────────────────────────────────────────────────────────
+  // ── Emergency Commands ────────────────────────────────────────────────────
 
   {
-    command: "+",
-    syntax: "<operand1> + <operand2>",
+    command: "EMAUTO",
+    syntax: "EMAUTO(<pt1>, ..., <pt16>)",
     description:
-      "Addition operator. Adds two numeric values or point references together. " +
-      "Used in SET expressions and condition clauses. Operands may be numeric " +
-      "literals, point identifiers, or local variables.",
-    example: "SET SUPPLY-SETPT = ZN-SETPT + OFFSET",
-    category: "Math/Logic",
+      "Emergency command that sets one or more points to AUTO state at emergency priority. " +
+      "Overrides all other priority levels. Up to 16 points per command.",
+    example: "2010 EMAUTO(SFAN1)",
+    category: "Point Control",
   },
   {
-    command: "-",
-    syntax: "<operand1> - <operand2>",
+    command: "EMFAST",
+    syntax: "EMFAST(<pt1>, ..., <pt16>)",
     description:
-      "Subtraction operator. Subtracts the second operand from the first. Used in " +
-      "SET expressions to compute deltas and offsets between point values.",
-    example: "SET TEMP-DELTA = SUPPLY-TEMP - RETURN-TEMP",
-    category: "Math/Logic",
+      "Emergency command that sets one or more points to FAST state at emergency priority. " +
+      "Used for smoke control and life-safety sequences. Up to 16 points per command.",
+    example: "2020 EMFAST(EXFAN1)",
+    category: "Point Control",
   },
   {
-    command: "*",
-    syntax: "<operand1> * <operand2>",
+    command: "EMOFF",
+    syntax: "EMOFF(<pt1>, ..., <pt16>)",
     description:
-      "Multiplication operator. Multiplies two numeric values. Commonly used for " +
-      "proportional gain calculations, unit conversions, and scaling sensor inputs.",
-    example: "SET KW-CALC = AMPS * VOLTS * 0.001",
-    category: "Math/Logic",
+      "Emergency command that turns OFF one or more points at emergency priority. " +
+      "Used for emergency shutdown sequences. Up to 16 points per command.",
+    example: "2030 EMOFF(SFAN1, RFAN1)",
+    category: "Point Control",
   },
   {
-    command: "/",
-    syntax: "<operand1> / <operand2>",
+    command: "EMON",
+    syntax: "EMON(<pt1>, ..., <pt16>)",
     description:
-      "Division operator. Divides the first operand by the second. Ensure the " +
-      "divisor is never zero; PPCL does not throw a runtime exception on divide-by-zero " +
-      "but results are undefined. Guard with an IF check when necessary.",
-    example:
-      "IF TOTAL-FLOW GT 0.0 THEN\n" +
-      "  SET AVG-FLOW = TOTAL-FLOW / NUM-ZONES\n" +
-      "ENDIF",
-    category: "Math/Logic",
+      "Emergency command that turns ON one or more points at emergency priority. " +
+      "Used for smoke purge and pressurization sequences. Up to 16 points per command.",
+    example: "2040 EMON(EXFAN1, PRFAN1)",
+    category: "Point Control",
   },
   {
-    command: "EQ",
-    syntax: "<operand1> EQ <operand2>",
+    command: "EMSET",
+    syntax: "EMSET(value,pt1,...,pt15)",
     description:
-      "Equal-to comparison operator. Returns true when both operands have the same " +
-      "value. Works for both analog (floating-point equality) and binary (state) " +
-      "comparisons. Use with caution for floating-point analog points.",
-    example:
-      "IF FAN-STATUS EQ ON THEN\n" +
-      "  SET STATUS-LED = ON\n" +
-      "ENDIF",
-    category: "Math/Logic",
+      "Emergency command that sets one or more points to a specific value at emergency priority. " +
+      "Value comes first, followed by up to 15 point names. Value can be a decimal, integer, " +
+      "point name, or local variable. Used for emergency analog overrides such as damper positions.",
+    example: "2050 EMSET(100.0, OADMPR, RADMPR)",
+    category: "Point Control",
   },
   {
-    command: "NE",
-    syntax: "<operand1> NE <operand2>",
+    command: "EMSLOW",
+    syntax: "EMSLOW(<pt1>, ..., <pt16>)",
     description:
-      "Not-equal-to comparison operator. Returns true when the two operands have " +
-      "different values. Useful for detecting state changes and fault conditions " +
-      "where a point differs from its expected value.",
-    example:
-      "IF FAN-CMD NE FAN-STATUS THEN\n" +
-      "  SET FAN-FAULT = ON\n" +
-      "ENDIF",
-    category: "Math/Logic",
-  },
-  {
-    command: "GT",
-    syntax: "<operand1> GT <operand2>",
-    description:
-      "Greater-than comparison operator. Returns true when the first operand is " +
-      "strictly greater than the second. Used for high-limit checking and " +
-      "threshold-based control logic.",
-    example:
-      "IF DUCT-PRESS GT 2.5 THEN\n" +
-      "  SET VFD-SPEED = VFD-SPEED - 5.0\n" +
-      "ENDIF",
-    category: "Math/Logic",
-  },
-  {
-    command: "LT",
-    syntax: "<operand1> LT <operand2>",
-    description:
-      "Less-than comparison operator. Returns true when the first operand is " +
-      "strictly less than the second. Used for low-limit checking and minimum " +
-      "threshold control logic.",
-    example:
-      "IF SUPPLY-TEMP LT 45.0 THEN\n" +
-      "  ALARM FREEZE-STAT 'FREEZESTAT TRIPPED'\n" +
-      "ENDIF",
-    category: "Math/Logic",
-  },
-  {
-    command: "GE",
-    syntax: "<operand1> GE <operand2>",
-    description:
-      "Greater-than-or-equal-to comparison operator. Returns true when the first " +
-      "operand is greater than or equal to the second. Useful for setpoint " +
-      "comparisons where equality should trigger the same action.",
-    example:
-      "IF ZN-TEMP GE COOLING-SETPT THEN\n" +
-      "  START COOLING-STAGE-1\n" +
-      "ENDIF",
-    category: "Math/Logic",
-  },
-  {
-    command: "LE",
-    syntax: "<operand1> LE <operand2>",
-    description:
-      "Less-than-or-equal-to comparison operator. Returns true when the first " +
-      "operand is less than or equal to the second. Useful for minimum-setpoint " +
-      "checking where equality should satisfy the condition.",
-    example:
-      "IF ZN-TEMP LE HEATING-SETPT THEN\n" +
-      "  START HTG-STAGE-1\n" +
-      "ENDIF",
-    category: "Math/Logic",
-  },
-  {
-    command: "AND",
-    syntax: "<condition1> AND <condition2>",
-    description:
-      "Logical AND operator. Combines two conditions so the compound expression is " +
-      "true only when both conditions are true simultaneously. Multiple AND " +
-      "operators may be chained in a single IF condition.",
-    example:
-      "IF FAN-STATUS EQ ON AND FILTER-DP GT 1.0 THEN\n" +
-      "  SET FILTER-ALARM = ON\n" +
-      "ENDIF",
-    category: "Math/Logic",
-  },
-  {
-    command: "OR",
-    syntax: "<condition1> OR <condition2>",
-    description:
-      "Logical OR operator. Combines two conditions so the compound expression is " +
-      "true when at least one condition is true. Used for fault aggregation and " +
-      "alternative trigger conditions.",
-    example:
-      "IF SMOKE-DET-1 EQ ON OR SMOKE-DET-2 EQ ON THEN\n" +
-      "  EMERG FIRE-SEQUENCE\n" +
-      "ENDIF",
-    category: "Math/Logic",
-  },
-  {
-    command: "NOT",
-    syntax: "NOT <condition>",
-    description:
-      "Logical NOT operator. Inverts a boolean condition, returning true when the " +
-      "condition is false and false when the condition is true. Used to negate " +
-      "binary point states or comparison results.",
-    example:
-      "IF NOT FAN-STATUS EQ ON THEN\n" +
-      "  SET FAN-FAIL-ALARM = ON\n" +
-      "ENDIF",
-    category: "Math/Logic",
+      "Emergency command that sets one or more points to SLOW state at emergency priority. " +
+      "Up to 16 points per command.",
+    example: "2060 EMSLOW(SFAN1)",
+    category: "Point Control",
   },
 
-  // ── Time / Schedule ──────────────────────────────────────────────────────────
+  // ── Operators ─────────────────────────────────────────────────────────────
 
+  {
+    command: ".EQ.",
+    syntax: "(<value1>.EQ.<value2>)",
+    description:
+      "Relational operator: Equal to. Compares two values and returns true if they are equal. " +
+      "Use with caution for analog points — precise float values may not match whole numbers.",
+    example: "530 IF (RMTEMP.EQ.80.0) THEN RMSET = 70.0",
+    category: "Operators",
+  },
+  {
+    command: ".NE.",
+    syntax: "(<value1>.NE.<value2>)",
+    description:
+      "Relational operator: Not equal to. Returns true if the two values are different.",
+    example: "630 IF (RMTEMP.NE.80.0) THEN RMSET = 70.0",
+    category: "Operators",
+  },
+  {
+    command: ".GT.",
+    syntax: "(<value1>.GT.<value2>)",
+    description:
+      "Relational operator: Greater than. Returns true if value1 is strictly greater than value2.",
+    example: "280 IF (RMTEMP.GT.80.0) THEN RMSET = 70.0",
+    category: "Operators",
+  },
+  {
+    command: ".LT.",
+    syntax: "(<value1>.LT.<value2>)",
+    description:
+      "Relational operator: Less than. Returns true if value1 is strictly less than value2.",
+    example: "930 IF (RMTEMP.LT.80.0) THEN RMSET = 70.0",
+    category: "Operators",
+  },
+  {
+    command: ".GE.",
+    syntax: "(<value1>.GE.<value2>)",
+    description:
+      "Relational operator: Greater than or equal to. Returns true if value1 >= value2.",
+    example: "740 IF (RMTEMP.GE.80.0) THEN RMSET = 70.0",
+    category: "Operators",
+  },
+  {
+    command: ".LE.",
+    syntax: "(<value1>.LE.<value2>)",
+    description:
+      "Relational operator: Less than or equal to. Returns true if value1 <= value2.",
+    example: "340 IF (RMTEMP.LE.80.0) THEN RMSET = 70.0",
+    category: "Operators",
+  },
+  {
+    command: ".AND.",
+    syntax: "(<cond1>.AND.<cond2>)",
+    description:
+      "Logical operator: And. Both conditions must be true for the result to be true. " +
+      "A single statement can incorporate up to 16 combined relational and logical operators.",
+    example: "1010 IF (SFAN1.EQ.ON.AND.PRFON.EQ.ON) THEN NORMAL(SFAN1)",
+    category: "Operators",
+  },
+  {
+    command: ".OR.",
+    syntax: "(<cond1>.OR.<cond2>)",
+    description:
+      "Logical operator: Or. The result is true if either condition (or both) is true.",
+    example: "1010 IF (SMOKE1.EQ.ON.OR.SMOKE2.EQ.ON) THEN EMOFF(SFAN1)",
+    category: "Operators",
+  },
+  {
+    command: ".NAND.",
+    syntax: "(<cond1>.NAND.<cond2>)",
+    description:
+      "Logical operator: Not And. The result is true unless both conditions are true. " +
+      "Equivalent to NOT (cond1 AND cond2).",
+    example: "1010 IF (FAN1.EQ.ON.NAND.FAN2.EQ.ON) THEN ALARM(SYSTEM)",
+    category: "Operators",
+  },
+  {
+    command: ".XOR.",
+    syntax: "(<cond1>.XOR.<cond2>)",
+    description:
+      "Logical operator: Exclusive Or. The result is true if exactly one condition is true, " +
+      "but not both.",
+    example: "1010 IF (PUMP1.EQ.ON.XOR.PUMP2.EQ.ON) THEN NORMAL(SYSTEM)",
+    category: "Operators",
+  },
+
+  // ── Math / Functions ──────────────────────────────────────────────────────
+
+  {
+    command: "MAX",
+    syntax: "MAX(<value1>, <value2>)",
+    description:
+      "Returns the maximum of two values. Used for high-select logic in control programs.",
+    example: "1030 MAXTEMP = MAX(ZONE1, ZONE2)",
+    category: "Math/Functions",
+  },
+  {
+    command: "MIN",
+    syntax: "MIN(<value1>, <value2>)",
+    description:
+      "Returns the minimum of two values. Used for low-select logic in control programs.",
+    example: "1040 MINTEMP = MIN(ZONE1, ZONE2)",
+    category: "Math/Functions",
+  },
+  {
+    command: "ATN",
+    syntax: "ATN(<value>)",
+    description: "Arithmetic function: Arc-Tangent. Returns the arctangent of the value in radians.",
+    example: "1050 ANGLE = ATN(RATIO)",
+    category: "Math/Functions",
+  },
+  {
+    command: "COM",
+    syntax: "COM(<value>)",
+    description: "Arithmetic function: Complement. Returns the one's complement of the value.",
+    example: "1060 RESULT = COM(INPUT)",
+    category: "Math/Functions",
+  },
+  {
+    command: "COS",
+    syntax: "COS(<value>)",
+    description: "Arithmetic function: Cosine. Returns the cosine of the value (in radians).",
+    example: "1070 RESULT = COS(ANGLE)",
+    category: "Math/Functions",
+  },
+  {
+    command: "EXP",
+    syntax: "EXP(<value>)",
+    description: "Arithmetic function: Natural Antilog. Returns e raised to the power of the value.",
+    example: "1080 RESULT = EXP(POWER)",
+    category: "Math/Functions",
+  },
+  {
+    command: "LOG",
+    syntax: "LOG(<value>)",
+    description: "Arithmetic function: Natural Log. Returns the natural logarithm of the value.",
+    example: "1090 RESULT = LOG(INPUT)",
+    category: "Math/Functions",
+  },
+  {
+    command: ".ROOT.",
+    syntax: "<value1>.ROOT.<value2>",
+    description: "Arithmetic function: Root. Returns value1 to the power of (1/value2). " +
+      "For example, 27.ROOT.3 returns the cube root of 27.",
+    example: "1100 RESULT = 27.0.ROOT.3.0",
+    category: "Math/Functions",
+  },
+  {
+    command: "SIN",
+    syntax: "SIN(<value>)",
+    description: "Arithmetic function: Sine. Returns the sine of the value (in radians).",
+    example: "1110 RESULT = SIN(ANGLE)",
+    category: "Math/Functions",
+  },
+  {
+    command: "SQRT",
+    syntax: "SQRT(<value>)",
+    description: "Arithmetic function: Square Root. Returns the square root of the value.",
+    example: "1120 RESULT = SQRT(INPUT)",
+    category: "Math/Functions",
+  },
+  {
+    command: "TAN",
+    syntax: "TAN(<value>)",
+    description: "Arithmetic function: Tangent. Returns the tangent of the value (in radians).",
+    example: "1130 RESULT = TAN(ANGLE)",
+    category: "Math/Functions",
+  },
+  {
+    command: "ALMPRI",
+    syntax: "ALMPRI(<point>, <priority>)",
+    description:
+      "Special function: Sets the alarm priority level for a point. Priority determines " +
+      "the order in which alarms are reported and displayed.",
+    example: "1140 ALMPRI(SFAN1, 5)",
+    category: "Math/Functions",
+  },
+  {
+    command: "TOTAL",
+    syntax: "TOTAL(<point>)",
+    description:
+      "Special function: Returns the totalized (accumulated) value of a point. " +
+      "Used for energy metering and runtime tracking.",
+    example: "1150 RUNTIME = TOTAL(SFAN1)",
+    category: "Math/Functions",
+  },
+
+  // ── Time / Schedule ───────────────────────────────────────────────────────
+
+  {
+    command: "TOD",
+    syntax: "TOD(<start_time>, <stop_time>, <action>)",
+    description:
+      "Time-of-Day command for digital points. Schedules actions based on time of day. " +
+      "Start and stop times are in decimal time format (e.g., 8.00 for 8:00 AM).",
+    example: "1010 TOD(8.00, 17.00, ON(SFAN1))",
+    category: "Time/Schedule",
+  },
+  {
+    command: "TODSET",
+    syntax: "TODSET(<point>, <time>, <value>)",
+    description:
+      "Time-of-Day command for analog points. Sets an analog value at a specified time. " +
+      "Used for scheduled setpoint changes based on occupancy.",
+    example: "1020 TODSET(CLGSET, 8.00, 74.0)",
+    category: "Time/Schedule",
+  },
   {
     command: "TODMOD",
-    syntax: "TODMOD <point> <schedule-block>",
+    syntax: "TODMOD(<point>, <schedule_data>)",
     description:
-      "Time-Of-Day MODification command. Sets the time-of-day schedule entry for " +
-      "a point or program. The schedule block defines start time, stop time, and " +
-      "day-of-week bits. Used to automate occupancy and setpoint scheduling.",
-    example: "TODMOD AHU-1-PGM 1 07:00 18:00 MTWTF",
+      "Time-of-Day mode command. Modifies the TOD schedule modes for a point. " +
+      "Used to set day, night, and holiday operating modes based on time schedules.",
+    example: "1030 TODMOD(SFAN1, DAYMOD)",
     category: "Time/Schedule",
   },
   {
-    command: "HOLMOD",
-    syntax: "HOLMOD <point> <holiday-index> <date>",
+    command: "DAY",
+    syntax: "DAY(<pt1>, ..., <pt16>)",
     description:
-      "HOLiday MODification command. Assigns a holiday exception date to a point " +
-      "or program so it follows the holiday schedule instead of the standard TOD " +
-      "schedule on the specified date.",
-    example: "HOLMOD AHU-1-PGM 1 12/25",
+      "Sets one or more points to DAY mode. Used for switching equipment to daytime " +
+      "(occupied) operating schedules. Up to 16 points per command.",
+    example: "1040 DAY(SFAN1, RFAN1)",
     category: "Time/Schedule",
   },
   {
-    command: "RUNMOD",
-    syntax: "RUNMOD <program> <mode>",
+    command: "NIGHT",
+    syntax: "NIGHT(<pt1>, ..., <pt16>)",
     description:
-      "RUN MODe command. Sets the execution mode of a PPCL program. Modes include " +
-      "RUN (normal execution), HOLD (execution suspended), and RESTART (reset and " +
-      "resume). Used to control program lifecycle from another program.",
-    example:
-      "IF MAINT-SW EQ ON THEN\n" +
-      "  RUNMOD AHU-1-PGM HOLD\n" +
-      "ELSE\n" +
-      "  RUNMOD AHU-1-PGM RUN\n" +
-      "ENDIF",
+      "Sets one or more points to NIGHT mode. Used for switching equipment to nighttime " +
+      "(unoccupied) operating schedules. Up to 16 points per command.",
+    example: "1050 NIGHT(SFAN1, RFAN1)",
     category: "Time/Schedule",
   },
-
-  // ── Communication ────────────────────────────────────────────────────────────
-
   {
-    command: "DBSWIT",
-    syntax: "DBSWIT <point> <panel-id>",
+    command: "HOLIDA",
+    syntax: "HOLIDA(month1,day1,...,month8,day8)",
     description:
-      "DataBase SWITch command. Routes a point reference to a specific peer panel " +
-      "in a multi-panel network. Enables one panel's PPCL program to read or write " +
-      "points that reside on another panel in the same network segment.",
-    example: "DBSWIT CHILLER-STATUS 2",
-    category: "Communication",
+      "Defines the dates of holidays up to a year in advance. Takes month/day pairs — " +
+      "up to 8 holidays per command. Multiple HOLIDA commands can be used for more than 8 dates. " +
+      "Must precede any TOD or TODSET commands. When a holiday date occurs, the TODMOD mode is set to 16.",
+    example: "630 HOLIDA(12,24,12,25,12,26,12,27)",
+    category: "Time/Schedule",
   },
   {
     command: "LOOP",
-    syntax: "LOOP <interval>",
+    syntax: "LOOP(<time_point>, <start_line>, <end_line>)",
     description:
-      "Sets the recurring execution interval for the current program in " +
-      "hours:minutes:seconds format. The program will re-execute automatically " +
-      "at each interval. A LOOP at the end of the program body is the standard " +
-      "way to create a continuously running control loop.",
-    example:
-      "* Main control logic above\n" +
-      "SET OUT-TEMP = OA-TEMP-SENSOR\n" +
-      "LOOP 0:00:30",
-    category: "Communication",
-  },
-  {
-    command: "TABLE",
-    syntax: "TABLE <name> <index> <value-list>",
-    description:
-      "Defines a lookup table that maps an index value to a corresponding output " +
-      "value. Used for linearization of non-linear sensors, staged output sequencing, " +
-      "and schedule lookup without complex IF/ELSE chains.",
-    example:
-      "TABLE STAGE-TBL COOLING-STAGES 0 1 2 3\n" +
-      "SET ACTIVE-STAGES = TABLE(STAGE-TBL, DEMAND-LEVEL)",
-    category: "Communication",
-  },
-  {
-    command: "SIDSID",
-    syntax: "SIDSID <source-panel> <dest-panel>",
-    description:
-      "Sets the System ID to System ID routing for inter-panel communication. " +
-      "Defines the source and destination panel IDs used when sharing point data " +
-      "across the N2 or BACnet network trunk.",
-    example: "SIDSID 1 3",
-    category: "Communication",
+      "Loop control command. Evaluates a block of program lines at a specified time interval. " +
+      "The time point controls the execution frequency. Time-based commands must be evaluated " +
+      "through every pass of the program for proper operation.",
+    example: "1010 LOOP(TIMER1, 2000, 2100)",
+    category: "Time/Schedule",
   },
   {
     command: "WAIT",
-    syntax: "WAIT <hh:mm:ss>",
+    syntax: "WAIT(<time>)",
     description:
-      "Suspends execution of the current program for the specified duration in " +
-      "hours:minutes:seconds format. After the wait period, execution continues " +
-      "with the next statement. Commonly used for time delays in sequencing logic.",
-    example:
-      "START AHU-1-FAN\n" +
-      "WAIT 0:00:30\n" +
-      "IF FAN-STATUS EQ OFF THEN\n" +
-      "  SET FAN-FAIL = ON\n" +
-      "ENDIF",
-    category: "Communication",
+      "Suspends execution of the program for the specified time period. Time is in seconds. " +
+      "The program resumes at the next line after the wait period expires. " +
+      "Time-based commands should be evaluated through every pass of the program.",
+    example: "1070 WAIT(30)",
+    category: "Time/Schedule",
   },
   {
     command: "SAMPLE",
-    syntax: "SAMPLE <point> <interval>",
+    syntax: "SAMPLE(sec) line",
     description:
-      "Instructs the controller to sample the specified point at the given interval " +
-      "and store the value for trend logging or averaging calculations. The sampled " +
-      "values are accessible through the Metasys trend data interface.",
-    example: "SAMPLE ZN-TEMP 0:05:00",
-    category: "Communication",
+      "Executes the specified PPCL statement at the given time interval in seconds. The seconds " +
+      "parameter is inside parentheses; the statement follows outside. The statement cannot include " +
+      "timing functions (WAIT, PDL, TOD, TIMAVG, LOOP, SSTO, or another SAMPLE). Executes immediately " +
+      "on power return, after ENABLE, or on first execution after database load.",
+    example: "200 SAMPLE(600) ON(HALFAN)",
+    category: "Time/Schedule",
+  },
+  {
+    command: "TIMAVG",
+    syntax: "TIMAVG(<point>, <period>, <result>)",
+    description:
+      "Calculates the average value of a point over a specified time period. " +
+      "Used for trend analysis and average temperature calculations.",
+    example: "1090 TIMAVG(OATEMP, 60, AVGTEMP)",
+    category: "Time/Schedule",
+  },
+  {
+    command: "SSTO",
+    syntax: "SSTO(<point>, <parameters>)",
+    description:
+      "Start/Stop Time Optimization. Adjusts equipment start and stop times based on " +
+      "thermal characteristics of the building to minimize energy use while maintaining comfort. " +
+      "Calculates optimal pre-start times using building thermal constants.",
+    example: "1010 SSTO(SFAN1, OATEMP, SPACE1, CLGSET, HTGSET)",
+    category: "Time/Schedule",
+  },
+  {
+    command: "SSTOCO",
+    syntax: "SSTOCO(<parameters>)",
+    description:
+      "SSTO Coefficients command. Defines the thermal coefficients used by the SSTO algorithm " +
+      "to calculate optimal start/stop times. Parameters include heating and cooling rate constants.",
+    example: "1020 SSTOCO(0.5, 1.2, 0.8, 1.5)",
+    category: "Time/Schedule",
+  },
+  {
+    command: "INITTO",
+    syntax: "INITTO(value,pt1,...,pt15)",
+    description:
+      "Initializes totalized values for one or more points. The value comes first (replaces current " +
+      "totalized value), followed by up to 15 point names. Value must be a decimal, point name, or " +
+      "local variable (not an integer). Typically used at the start of an energy metering period.",
+    example: "1010 INITTO(0.0, KWHTOT)",
+    category: "Time/Schedule",
   },
 
-  // ── System ───────────────────────────────────────────────────────────────────
+  // ── System ────────────────────────────────────────────────────────────────
 
   {
     command: "DEFINE",
-    syntax: "DEFINE <point-id> <point-type> [<attributes>]",
+    syntax: "DEFINE(<abbreviation>, <full_name>)",
     description:
-      "Declares and registers a point within the controller's database. Specifies " +
-      "the point identifier, type (AI, AO, BI, BO, or program), and optional " +
-      "attributes such as engineering units, limits, and alarm parameters. DEFINE " +
-      "statements appear at the top of the program or in a separate definition block.",
-    example: "DEFINE ZN-TEMP AI UNITS=DEGF HIALM=85.0 LOALM=55.0",
+      "Defines an abbreviation for a point name. Allows using short point names in the program " +
+      "that map to longer database point names (greater than 6 characters). " +
+      "Point names longer than 6 characters must be enclosed in double quotes.",
+    example: '1000 DEFINE(SFAN1, "BUILDING1.AHU01.SFAN")',
     category: "System",
   },
   {
     command: "LOCAL",
-    syntax: "LOCAL <variable-name> [= <initial-value>]",
+    syntax: "LOCAL(<variable>, <value>)",
     description:
-      "Declares a local numeric variable scoped to the current program execution " +
-      "cycle. Local variables are not visible to other programs and reset to their " +
-      "initial value (or zero if unspecified) on each program restart.",
-    example:
-      "LOCAL TEMP-DIFF = 0.0\n" +
-      "SET TEMP-DIFF = SUPPLY-TEMP - RETURN-TEMP",
+      "Declares and initializes a local variable ($LOC1 through $LOC15). " +
+      "Local variables are scoped to the current program and can be used for intermediate " +
+      "calculations. Values persist across program scans until explicitly changed.",
+    example: "1010 LOCAL($LOC1, 0.0)",
     category: "System",
   },
   {
-    command: "ADAPT",
-    syntax: "ADAPT <point> <parameter> <value>",
+    command: "ONPWRT",
+    syntax: "ONPWRT(line#)",
     description:
-      "Modifies an adaptive control parameter for a point at runtime. Used to " +
-      "tune PID gains, reset rates, and authority values without reloading the " +
-      "program. Changes made with ADAPT persist until the controller is restarted " +
-      "or another ADAPT command overrides them.",
-    example: "ADAPT CHW-VLV PGAIN 2.5",
+      "On-Power-Return command. Specifies the line number at which execution begins after " +
+      "returning from a power failure. Line number must be an integer from 1 to 32,767. " +
+      "If the line number is invalid, the command is ignored. Executed only on the first pass " +
+      "after power return.",
+    example: "10 ONPWRT(100)",
     category: "System",
   },
   {
-    command: "ALARM",
-    syntax: "ALARM <point> '<message>'",
+    command: "STATE",
+    syntax: "STATE(<point>, <text>)",
     description:
-      "Generates a controller-level alarm for the specified point with the given " +
-      "text message. The alarm is transmitted to the Metasys network for annunciation " +
-      "and logging. Message text must be enclosed in single quotes and is limited " +
-      "to 40 characters.",
-    example:
-      "IF DUCT-TEMP GT 120.0 THEN\n" +
-      "  ALARM DUCT-TEMP 'HIGH DUCT TEMP LIMIT EXCEEDED'\n" +
-      "ENDIF",
+      "Assigns a custom state text string to a point. Used to provide meaningful status " +
+      "descriptions visible to operators at the HMI/MMI interface.",
+    example: '1010 STATE(AHU1, "HEATING MODE")',
     category: "System",
   },
   {
-    command: "EMERG",
-    syntax: "EMERG <program-label>",
+    command: "TABLE",
+    syntax: "TABLE(<result>, <index>, <x1>, <y1>, <x2>, <y2>, ...)",
     description:
-      "Triggers an emergency program or subroutine, immediately transferring " +
-      "execution to the specified label or program with the highest execution " +
-      "priority. Used for life-safety sequences such as smoke control, fire " +
-      "shutdown, and freeze protection that must preempt normal control logic.",
-    example:
-      "IF FREEZE-STAT EQ OPEN THEN\n" +
-      "  EMERG FREEZE-PROTECT\n" +
-      "ENDIF",
+      "Defines a lookup table that maps index values to corresponding output values using " +
+      "linear interpolation between coordinate pairs. Used for reset schedules, " +
+      "linearization of non-linear sensors, and staged output sequencing.",
+    example: "1010 TABLE(CLGSET, OATEMP, 60.0, 78.0, 90.0, 72.0)",
     category: "System",
+  },
+  {
+    command: "PDL",
+    syntax: "PDL(<parameters>)",
+    description:
+      "Peak Demand Limiting. Monitors electrical demand and sheds loads to keep consumption " +
+      "below a setpoint. Automatically restores loads when demand drops. " +
+      "Uses PDLDAT, PDLDPG, PDLMTR, and PDLSET for configuration.",
+    example: "1010 PDL(METER1, PDLSP)",
+    category: "System",
+  },
+  {
+    command: "PDLDAT",
+    syntax: "PDLDAT(<point>, <attributes>)",
+    description:
+      "PDL Define Load Attributes. Defines the characteristics of loads available for " +
+      "demand limiting including load priority, minimum on/off times, and demand reduction value.",
+    example: "1020 PDLDAT(SFAN1, 3, 300, 300, 15.0)",
+    category: "System",
+  },
+  {
+    command: "PDLDPG",
+    syntax: "PDLDPG(<points>)",
+    description:
+      "PDL Digital Point Group. Defines a group of digital (binary) points that participate " +
+      "in peak demand limiting load shedding.",
+    example: "1030 PDLDPG(SFAN1, SFAN2, SFAN3)",
+    category: "System",
+  },
+  {
+    command: "PDLMTR",
+    syntax: "PDLMTR(<meter_point>, <parameters>)",
+    description:
+      "PDL Meter Monitor. Defines the meter point and parameters used to monitor " +
+      "electrical demand for the PDL algorithm.",
+    example: "1040 PDLMTR(KWH1, 15, 1000.0)",
+    category: "System",
+  },
+  {
+    command: "PDLSET",
+    syntax: "PDLSET(<setpoint>, <parameters>)",
+    description:
+      "PDL Setpoints. Defines the demand limiting setpoints and control parameters " +
+      "for the PDL algorithm including demand target and deadband.",
+    example: "1050 PDLSET(500.0, 50.0)",
+    category: "System",
+  },
+  {
+    command: "DC",
+    syntax: "DC(<parameters>)",
+    description:
+      "Duty Cycling. Cycles equipment on and off at specified intervals to reduce energy " +
+      "consumption during periods of low demand. Maintains acceptable comfort levels " +
+      "while reducing runtime hours.",
+    example: "1010 DC(SFAN1, 45, 15)",
+    category: "System",
+  },
+  {
+    command: "DCR",
+    syntax: "DCR(<parameters>)",
+    description:
+      "Duty Cycle Routine. Provides more sophisticated duty cycling with temperature-based " +
+      "override to ensure comfort limits are maintained during cycling operations.",
+    example: "1020 DCR(SFAN1, 45, 15, SPACE1, 72.0, 76.0)",
+    category: "System",
+  },
+  {
+    command: "ADAPTM",
+    syntax: "ADAPTM(<parameters>)",
+    description:
+      "Adaptive control for multiple points. Provides adaptive (self-tuning) PID control " +
+      "for multiple analog loops. Automatically adjusts control parameters based on " +
+      "system response to maintain optimal performance.",
+    example: "1010 ADAPTM(CHW1, SPACE1, CLGSET, 74.0, 0.5, 2.0)",
+    category: "System",
+  },
+  {
+    command: "ADAPTS",
+    syntax: "ADAPTS(<parameters>)",
+    description:
+      "Adaptive control for a single point. Provides adaptive (self-tuning) PID control " +
+      "for a single analog loop. Automatically adjusts control parameters based on " +
+      "system response.",
+    example: "1020 ADAPTS(CHW1, SPACE1, CLGSET)",
+    category: "System",
+  },
+  {
+    command: "DBSWIT",
+    syntax: "DBSWIT(<switch_value>)",
+    description:
+      "Dead Band Switch. Provides on/off control with adjustable deadband to prevent " +
+      "short cycling of equipment. The switch point turns on at one value and off at another, " +
+      "with the difference being the deadband.",
+    example: "1010 DBSWIT(SFAN1, SPACE1, 74.0, 2.0)",
+    category: "System",
+  },
+
+  // ── Communication ─────────────────────────────────────────────────────────
+
+  {
+    command: "OIP",
+    syntax: "OIP(<parameters>)",
+    description:
+      "Operator Interface Program. Provides a custom operator display at the field panel " +
+      "HMI/MMI port. Allows operators to view point values and make adjustments " +
+      "through a structured menu interface.",
+    example: "1010 OIP(OATEMP, SPACE1, CLGSET, HTGSET)",
+    category: "Communication",
+  },
+  {
+    command: "DISALM",
+    syntax: "DISALM(<pt1>, ..., <pt16>)",
+    description:
+      "Disables alarm reporting for one or more points. Up to 16 points can have alarms " +
+      "disabled by a single command. The point status changes to *PDSB* after being DISALMed. " +
+      "Cannot disable alarms for points on other devices over the network.",
+    example: "1010 IF (SFAN.EQ.OFF) THEN DISALM(ROOM1) ELSE ENALM(ROOM1)",
+    category: "Communication",
+  },
+  {
+    command: "ENALM",
+    syntax: "ENALM(<pt1>, ..., <pt16>)",
+    description:
+      "Enables alarm reporting for one or more points. Up to 16 points can have alarms " +
+      "enabled by a single command. Restores alarm reporting after DISALM.",
+    example: "1020 ENALM(ROOM1, ROOM2, ROOM3)",
+    category: "Communication",
+  },
+  {
+    command: "DISCOV",
+    syntax: "DISCOV(<pt1>, ..., <pt16>)",
+    description:
+      "Disables Change-of-Value (COV) reporting for one or more points. " +
+      "Reduces network traffic by stopping automatic value change notifications. " +
+      "Up to 16 points per command.",
+    example: "1030 DISCOV(OATEMP, SPACE1)",
+    category: "Communication",
+  },
+  {
+    command: "ENCOV",
+    syntax: "ENCOV(<pt1>, ..., <pt16>)",
+    description:
+      "Enables Change-of-Value (COV) reporting for one or more points. " +
+      "Restores COV notifications after DISCOV. Up to 16 points per command.",
+    example: "1040 ENCOV(OATEMP, SPACE1)",
+    category: "Communication",
+  },
+  {
+    command: "DPHONE",
+    syntax: "DPHONE(<pt1>, ..., <pt16>)",
+    description:
+      "Disables phone-out alarm notification for one or more points. " +
+      "Stops the system from calling out alarms for the specified points. " +
+      "Up to 16 points per command.",
+    example: "1050 DPHONE(ROOM1)",
+    category: "Communication",
+  },
+  {
+    command: "EPHONE",
+    syntax: "EPHONE(<pt1>, ..., <pt16>)",
+    description:
+      "Enables phone-out alarm notification for one or more points. " +
+      "Restores phone-out alarm calling after DPHONE. Up to 16 points per command.",
+    example: "1060 EPHONE(ROOM1)",
+    category: "Communication",
   },
 ];

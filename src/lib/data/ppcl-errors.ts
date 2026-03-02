@@ -1,29 +1,15 @@
 /**
  * PPCL (Powers Process Control Language) Common Errors Reference
- * For use with Johnson Controls (JCI) building automation systems.
+ * For use with Siemens APOGEE building automation systems.
  *
- * This data file provides a structured reference for field engineers
- * diagnosing and resolving PPCL program errors in the field.
- *
- * Each entry describes a discrete error condition encountered during
- * PPCL program development, upload, download, or runtime execution
- * on JCI Metasys or legacy P2000/DX series controllers.
+ * Source: APOGEE PPCL User's Manual (125-1896, Rev. 6, May 2006)
+ * Errors are based on common issues encountered during PPCL program
+ * development, upload, and runtime execution on Siemens APOGEE and
+ * BACnet field panels.
  *
  * Usage:
  *   import { ppclErrors, PPCLError } from '$lib/data/ppcl-errors';
  */
-
-// ---------------------------------------------------------------------------
-// Interface Definition
-// ---------------------------------------------------------------------------
-// id          - Unique numeric identifier for the error record
-// error       - Short human-readable error name (matches controller output
-//               where applicable)
-// symptoms    - Observable behavior a field engineer would notice
-// rootCause   - Technical explanation of why the error occurs
-// fix         - Step-by-step remediation guidance
-// category    - Logical grouping for filtering/display purposes
-// ---------------------------------------------------------------------------
 
 export interface PPCLError {
   id: number;
@@ -34,290 +20,264 @@ export interface PPCLError {
   category: string;
 }
 
-// ---------------------------------------------------------------------------
-// PPCL Error Data
-// Categories: "Syntax" | "Runtime" | "Point Issues" |
-//             "Program Flow" | "Configuration"
-// ---------------------------------------------------------------------------
-
 export const ppclErrors: PPCLError[] = [
-  // ---- Syntax Errors -------------------------------------------------------
+  // ── Syntax Errors ─────────────────────────────────────────────────────────
   {
     id: 1,
-    error: "Missing ENDDO",
+    error: "Duplicate Line Number",
     symptoms:
-      "Controller enters an infinite loop; the program scan time climbs until the watchdog timer fires and the controller resets or the program is marked faulted. Other programs on the same panel may stop executing.",
+      "Program upload fails or field panel rejects the download. Editor may flag a duplicate line number conflict. GOTO and GOSUB targets may resolve to the wrong line.",
     rootCause:
-      "A DO/WHILE or DO/UNTIL loop block was opened but the corresponding ENDDO statement was never written. PPCL requires every DO to be closed with ENDDO before the program can exit the loop during compilation or runtime scan.",
-    fix: "Open the program in the PPCL editor. Search for every DO statement and verify a matching ENDDO exists at the correct indentation level. Add the missing ENDDO, re-compile, and re-download the program. Monitor scan time after download to confirm it returns to baseline.",
+      "Two or more PPCL statements share the same line number. PPCL requires every statement to have a unique line number (valid range: 1 to 32,767). Duplicate numbers confuse the compiler's jump-table resolution.",
+    fix: "Audit all line numbers in the program to ensure uniqueness. Use the editor's renumber function if available. Number lines in multiples of 10 (10, 20, 30...) so modifications can be inserted without renumbering. Update all GOTO and GOSUB references to match corrected line numbers.",
     category: "Syntax",
   },
   {
     id: 2,
-    error: "Missing ENDIF",
+    error: "Line Number Out of Range",
     symptoms:
-      "Compile-time error reported during program upload; editor highlights the line after the last IF block. Program will not download to the controller until the error is resolved.",
+      "Compile error on the offending line. Program will not download to the field panel.",
     rootCause:
-      "An IF or IF/ELSE conditional block was opened but no ENDIF statement closes it. PPCL treats the remainder of the program as part of the open IF block, causing a structural mismatch at compile time.",
-    fix: "Trace every IF statement in the program and confirm a corresponding ENDIF closes it. Nested IF blocks each require their own ENDIF. Add the missing ENDIF at the correct nesting level, re-compile, and re-download.",
+      "A PPCL line number is outside the valid range of 1 through 32,767. This can occur when auto-numbering exceeds the limit or when manually entering line numbers.",
+    fix: "Ensure all line numbers fall within 1-32,767. If the program has grown too large, consider splitting it into multiple smaller programs. Renumber from a lower starting point using multiples of 10.",
     category: "Syntax",
   },
   {
     id: 3,
-    error: "Variable Name Too Long",
+    error: "Line Too Long",
     symptoms:
-      "Compile error: 'Variable name exceeds maximum length'. The offending line is flagged in the editor. The program cannot be compiled or downloaded.",
+      "Characters are truncated when entering the program line. The program may compile but execute incorrectly due to the truncation.",
     rootCause:
-      "PPCL enforces a maximum variable name length (typically 8 characters for LOCAL variables and controller-specific limits for global references). A declared or referenced variable name exceeds this limit.",
-    fix: "Identify all variable declarations and references that exceed the character limit. Rename them to shorter, still-descriptive identifiers (e.g., DISCHARGE_AIR_TEMP to DATMP). Update every reference to the renamed variable throughout the program, re-compile, and re-download.",
+      "APOGEE firmware limits each program line to 66 characters including the line number when entered through the HMI or MMI port. Pre-APOGEE firmware allows 72 characters. If more characters are needed, use the ampersand (&) continuation character.",
+    fix: "Break long lines using the ampersand (&) at the end of the first line and continue on the next. APOGEE allows up to three continued lines (198 total characters including ampersands and line numbers). Pre-APOGEE allows two continued lines (144 total characters).",
     category: "Syntax",
   },
   {
     id: 4,
-    error: "Line Number Conflict",
+    error: "GOSUB Without RETURN",
     symptoms:
-      "Compile error indicating a duplicate or out-of-sequence line number. The editor may refuse to accept the program or the controller rejects the download with a line number mismatch fault.",
+      "Program execution falls through the end of a subroutine into subsequent code. Unexpected logic branches occur and outputs may be commanded incorrectly. The field panel may log a stack fault.",
     rootCause:
-      "PPCL programs use explicit line numbers for GOTO and GOSUB targets. Duplicate line numbers or non-sequential numbering (depending on controller version) confuse the compiler's jump-table resolution, producing a conflict.",
-    fix: "Use the editor's auto-renumber function if available, or manually audit all line numbers to ensure they are unique and sequential. Update all GOTO and GOSUB statements to reference the corrected line numbers. Re-compile and re-download.",
+      "A GOSUB statement transfers execution to a subroutine, but the subroutine does not terminate with a RETURN statement. Without RETURN, the controller continues executing code sequentially past the subroutine end.",
+    fix: "Locate every GOSUB target line and verify that each subroutine block ends with a RETURN statement before the next logical block begins. Add missing RETURN statements. Add comment lines to clearly mark subroutine boundaries.",
     category: "Syntax",
   },
   {
     id: 5,
-    error: "GOSUB Without RETURN",
+    error: "Reserved Word Used as Point Name",
     symptoms:
-      "Program execution falls through the end of a subroutine into subsequent code rather than returning to the calling line. Unexpected logic branches occur; outputs may be commanded incorrectly. In some controllers a stack overflow fault is logged.",
+      "Program does not operate properly. The field panel may interpret the point name as a command, causing unexpected behavior. Compile may succeed but runtime execution is incorrect.",
     rootCause:
-      "A GOSUB statement transfers execution to a subroutine block, but the subroutine does not terminate with a RETURN statement. Without RETURN, the controller continues executing code sequentially past the subroutine end.",
-    fix: "Locate every subroutine target (the label or line number referenced by GOSUB). Verify that each subroutine ends with a RETURN statement before the next logical block begins. Add missing RETURN statements, re-compile, and re-download. Add a comment header to each subroutine for clarity.",
+      "A point name matches a PPCL reserved word from Appendix A of the manual (e.g., TIME, DAY, ALARM, ON, OFF, SET, AUTO, etc.). The PPCL compiler treats these names as commands rather than point references.",
+    fix: "Rename the point to avoid all PPCL reserved words (see Appendix A of the PPCL User's Manual). Use descriptive names that include a prefix or suffix to differentiate from reserved words (e.g., use OATEMP instead of TEMP, SFAN1 instead of FAN). Update the point database and all program references.",
+    category: "Syntax",
+  },
+  {
+    id: 6,
+    error: "Point Name Requires Quotes",
+    symptoms:
+      "Compile error referencing the point name. Program will not download. The point cannot be resolved in the database.",
+    rootCause:
+      "PPCL point names greater than 6 characters or containing characters other than A-Z and 0-9 must be enclosed in double quotes. APOGEE firmware supports names up to 30 characters with letters, numbers, spaces, periods, commas, dashes, underlines, and apostrophes.",
+    fix: 'Enclose the point name in double quotes in the PPCL program. Example: ON("BUILDING1.AHU01.SFAN"). For pre-APOGEE firmware, point names are limited to 6 characters using only A-Z and 0-9.',
     category: "Syntax",
   },
 
-  // ---- Runtime Errors ------------------------------------------------------
-  {
-    id: 6,
-    error: "Division by Zero",
-    symptoms:
-      "Controller logs a runtime fault on the specific line performing division. The calculated output point may go to zero, null, or an unreliable value. Downstream logic depending on that value behaves erratically.",
-    rootCause:
-      "A PPCL expression divides a value by a variable or point that evaluates to zero at runtime. This is often conditional on an operating mode (e.g., dividing by occupancy count when the zone is unoccupied).",
-    fix: "Wrap the division in a guard condition: before dividing, check that the divisor is not zero (e.g., IF DIVISOR <> 0 THEN RESULT = NUMERATOR / DIVISOR ELSE RESULT = 0 ENDIF). Re-compile and re-download. Test with the divisor at zero to confirm the guard works.",
-    category: "Runtime",
-  },
+  // ── Runtime Errors ────────────────────────────────────────────────────────
   {
     id: 7,
-    error: "WAIT Statement Blocking Execution",
+    error: "Backward GOTO Causing Infinite Loop",
     symptoms:
-      "The program appears to stall; outputs controlled by code after the WAIT statement do not update for the duration of the wait period. If the wait is inside a loop, the entire panel scan may be delayed, triggering watchdog resets.",
+      "Program scan time climbs until the watchdog timer fires and the field panel resets or the program is faulted. Other programs on the same panel may stop executing.",
     rootCause:
-      "A WAIT statement suspends the current program's execution for a specified time. If used inside a tight loop or with an excessively long duration, it blocks the program from completing its scan within the controller's allowed cycle time.",
-    fix: "Replace WAIT-based timing logic with time-stamp comparisons using the system clock (e.g., store a start time and compare against current time each scan). If WAIT is necessary, ensure the duration is shorter than the controller's maximum scan allowance. Move time-sensitive logic outside of loops.",
+      "A GOTO statement transfers execution to a lower line number, creating a loop that never reaches the end of the program. Per the PPCL Design Guidelines, routing commands should always transfer to a sequentially higher line number to prevent endless loops.",
+    fix: "Restructure the program so all GOTO statements transfer to higher line numbers. Use IF/THEN/ELSE conditional logic instead of GOTO loops where possible. If a loop is needed, use time-based commands (LOOP, WAIT, SAMPLE) to control execution frequency.",
     category: "Runtime",
   },
   {
     id: 8,
-    error: "Program Too Large for Memory",
+    error: "Time-Based Command Not Evaluated Every Pass",
     symptoms:
-      "Download fails with a 'program memory exceeded' or 'insufficient memory' error. The controller refuses to accept the program. Previously downloaded programs on the panel continue to run.",
+      "LOOP, WAIT, SAMPLE, TOD, or SSTO commands execute at incorrect intervals or not at all. Scheduled events fire at wrong times. Equipment starts/stops unexpectedly.",
     rootCause:
-      "The compiled PPCL program exceeds the available program memory on the controller. This can result from excessively long programs, too many variables, or attempting to load multiple large programs onto a memory-limited panel.",
-    fix: "Split the program into multiple smaller programs and distribute logic across them, using global points to share data. Remove dead code, unused variables, and redundant comments (comments consume memory in some controllers). If the panel is near capacity, consider offloading logic to a supervisory controller or upgrading the panel.",
+      "Time-based commands (LOOP, SAMPLE, TOD, TODSET, WAIT, SSTO) must be evaluated through every pass of the program for proper operation. If these commands are inside a conditional block (IF/THEN) or deactivated line range, they may be skipped during some program passes.",
+    fix: "Move all time-based commands outside of conditional blocks so they are evaluated on every program pass. Place them in the main execution path of the program, not inside IF/THEN blocks or line ranges controlled by ACT/DEACT.",
     category: "Runtime",
   },
   {
     id: 9,
-    error: "ADAPT Range Error",
+    error: "First Line Not Executed Every Pass",
     symptoms:
-      "The ADAPT (adaptive control) output saturates at its minimum or maximum limit and does not respond to the controlled variable. The controller may log an 'ADAPT out of range' message. The controlled process drifts from setpoint.",
+      "After a power failure or program restart, the program does not initialize correctly. Equipment remains in an unknown state. ONPWRT command does not execute as expected.",
     rootCause:
-      "ADAPT parameters (gain, reset, or output limits) were configured outside the allowable range for the controller, or the adaptive algorithm accumulated integrator windup because the output was clamped for an extended period.",
-    fix: "Review the ADAPT statement parameters against the controller's documentation for valid ranges. Reset integrator windup by temporarily setting the ADAPT output to manual and then returning to auto. Reconfigure gain and reset time based on the process characteristics. Consider adding anti-windup logic.",
+      "For Unitary and pre-APOGEE firmware, the last line of the program must be executed on every pass, and program execution always resumes at the first line after an interruption. If the first line is inside a conditional block or deactivated range, initialization logic may be skipped.",
+    fix: "Ensure the first line of the program is always executed on every pass. Place initialization commands (like ONPWRT) at the very beginning of the program. Do not place the first line inside a conditional block or a range controlled by ACT/DEACT/ENABLE/DISABL.",
     category: "Runtime",
   },
   {
     id: 10,
-    error: "Communication Timeout",
+    error: "Program Too Large for Memory",
     symptoms:
-      "Points shared between panels (global or network points) show stale or last-known values. The dependent program logs a communication fault. Alarms may fire if the stale value triggers a threshold. The affected program may enter a fallback control mode.",
+      "Download fails with a memory error. The field panel refuses to accept the program. Previously downloaded programs continue to run.",
     rootCause:
-      "The controller did not receive a refresh of a networked point value within the configured timeout period. This can result from a network wiring fault, a failed panel, excessive network traffic, or an incorrectly configured poll rate.",
-    fix: "Check physical network wiring and termination resistors on the SA Bus or N2 trunk. Verify the source panel is online and the point is actively published. Reduce network poll frequency if the trunk is overloaded. Add timeout fallback logic in the PPCL program (e.g., IF COMM_FAULT = 1 THEN use local setpoint ENDIF).",
+      "The PPCL program exceeds the available program memory on the field panel. The maximum number of program lines is limited by the free memory of the device. Multiple large programs on the same panel compound the issue.",
+    fix: "Split the program into multiple smaller programs of roughly equal size. Remove unused code and comments (comments consume memory). Use DEFINE abbreviations to shorten repeated long point names. For APOGEE panels, multiple programs can run independently.",
+    category: "Runtime",
+  },
+  {
+    id: 11,
+    error: "Cross-Panel Control Failure",
+    symptoms:
+      "Commands sent to points on another field panel are ignored or produce unpredictable results. Shared point values show stale or incorrect data.",
+    rootCause:
+      "PPCL Design Guidelines state that a program defined in one field panel should not be used to control points in a different field panel. Loop statements should not be closed across a network. Network communication latency causes timing issues.",
+    fix: "Restructure the control logic so each field panel's program only controls points in its own database. Use network-shared global points for coordination between panels rather than direct cross-panel commands.",
     category: "Runtime",
   },
 
-  // ---- Point Issues --------------------------------------------------------
-  {
-    id: 11,
-    error: "Point Not in Database",
-    symptoms:
-      "Runtime error: 'undefined point' or 'point not found' logged against the program line referencing the point. The program may halt or skip execution of the affected block. Any output depending on the missing point defaults to zero or null.",
-    rootCause:
-      "The program references a point name that does not exist in the controller's point database. Common causes include a typo in the point name, the point was deleted after the program was written, or the program was copied from another panel without updating point names.",
-    fix: "Open the controller's point database and verify the exact spelling and case of the point name. Correct the reference in the PPCL program. If the point was intentionally removed, update the program logic to remove or replace the reference. Re-compile and re-download.",
-    category: "Point Issues",
-  },
+  // ── Point Issues ──────────────────────────────────────────────────────────
   {
     id: 12,
-    error: "Binary Point Override Stuck",
+    error: "Point Not in Database",
     symptoms:
-      "A binary (digital) output or input point remains in a manually overridden state regardless of program commands. The point's status shows 'override' or 'manual' in the front-end. The controlled device does not respond to automatic control.",
+      "Runtime error: undefined point or point not found. The program may halt or skip the affected statement. Output points depending on the missing point default to zero.",
     rootCause:
-      "An operator or technician manually overrode the point at the controller or through the front-end and did not release the override. PPCL program writes to an overridden point are silently ignored; the override takes priority.",
-    fix: "At the controller keypad or through the front-end software, navigate to the point and release the manual override (set to 'auto' or 'normal'). Confirm the program resumes control. Document the override event. Consider adding an alarm to notify operators when critical points remain in override longer than a defined period.",
+      "The program references a point name that does not exist in the field panel's point database. All physical and virtual points used in the program must be defined in the point database. Common causes include typos, deleted points, or copying programs between panels without updating point names.",
+    fix: "Verify the exact spelling of the point name in the field panel's database. For APOGEE firmware, point names up to 30 characters are valid. For pre-APOGEE, names are limited to 6 characters (A-Z, 0-9 only). Correct the reference in the program. Point names starting with numbers must be prefixed with @.",
     category: "Point Issues",
   },
   {
     id: 13,
-    error: "Analog Point Out of Range",
+    error: "Point Override Stuck (HAND Mode)",
     symptoms:
-      "An analog input reads a value outside its configured engineering unit range (e.g., a temperature sensor reads -999 or 9999). Alarms fire incorrectly. Control loops using the point behave erratically or drive outputs to extremes.",
+      "A point remains in manually overridden state regardless of PPCL program commands. The point status shows HAND. The controlled device does not respond to automatic control.",
     rootCause:
-      "The physical sensor signal (typically 0-10 VDC or 4-20 mA) is outside the expected range due to a wiring fault, a failed sensor, incorrect scaling configuration in the point database, or the point database range does not match the field device.",
-    fix: "Measure the raw signal at the controller terminal with a multimeter. Compare against the expected signal range for the sensor type. If the signal is correct, reconfigure the point's low/high engineering unit range to match the sensor output curve. If the signal is out of spec, inspect wiring and replace the sensor as needed.",
+      "An operator or technician manually overrode the point at the field panel HMI/MMI or through the front-end. PPCL program writes to an overridden (HAND) point are silently ignored. The HAND priority takes precedence over PPCL commands.",
+    fix: "Release the manual override by setting the point back to AUTO at the HMI/MMI or front-end. Confirm the program resumes control. Consider using the PPCL AUTO() command in the program to automatically clear overrides under specific conditions. Document the override event.",
     category: "Point Issues",
   },
   {
     id: 14,
     error: "Priority Conflict",
     symptoms:
-      "A point's value is unexpectedly controlled by a source other than the PPCL program. The program's writes appear to be ignored or overridden. The front-end shows the point at an unexpected value with a priority indicator that does not match the program.",
+      "A point's value is unexpectedly controlled by a source other than the PPCL program. The program's writes appear to be ignored. Emergency commands override normal PPCL control.",
     rootCause:
-      "PPCL and Metasys use a priority array for point control. A higher-priority source (such as an operator override, an emergency command, or another program writing at a higher priority level) is commanding the point, preventing the PPCL program's write from taking effect.",
-    fix: "Review the point's priority array in the front-end to identify which priority level is active. Release or clear the higher-priority command if it is not intentional. Determine if another program is unintentionally writing to the same point. Establish a priority convention across programs to prevent conflicts.",
+      "PPCL uses a priority system with levels including @NONE (PPCL default), @OPER (operator), @PDL (peak demand limiting), @EMER (emergency), and @SMOKE (smoke control). Higher-priority sources override lower-priority PPCL commands. Emergency commands (EMON, EMOFF, EMFAST, EMSLOW, EMAUTO, EMSET) write at @EMER priority.",
+    fix: "Review the point's priority status using @ priority indicators. Use RELEAS() to release PPCL control if needed. Ensure emergency sequences properly release points after the emergency condition clears. Establish a clear priority convention across all programs.",
     category: "Point Issues",
   },
   {
     id: 15,
-    error: "Point Naming Convention Violation",
+    error: "Analog Point EQ Comparison Fails",
     symptoms:
-      "Database import or point creation fails with a naming error. The point is rejected by the controller or the front-end. Existing programs that reference the intended point name fail to bind correctly.",
+      "An IF condition using .EQ. on an analog point never evaluates to true, even when the point appears to be at the compared value. Control logic dependent on the comparison never executes.",
     rootCause:
-      "JCI PPCL and Metasys enforce point naming rules: names must start with a letter, contain only alphanumeric characters and underscores, not exceed the character limit, and must not use reserved PPCL keywords. Violating any of these rules causes the point to be rejected.",
-    fix: "Rename the point to comply with the naming convention: start with a letter, use only A-Z, 0-9, and underscore, keep the name within the controller's limit (typically 8-16 characters), and avoid PPCL reserved words (IF, DO, WHILE, etc.). Update all program references to the new name and re-download.",
+      "Analog input points may contain precise decimal values (e.g., 79.9876). When comparing with .EQ. to a whole number (80.0), the result is false because the values are not identical. The PPCL manual warns about this for analog inputs.",
+    fix: "Use range-based comparisons (.GT., .LT., .GE., .LE.) instead of .EQ. for analog points. For example, instead of IF (RMTEMP.EQ.80.0), use IF (RMTEMP.GE.79.5.AND.RMTEMP.LE.80.5). Reserve .EQ. for digital/binary point comparisons (ON, OFF) and known exact values.",
     category: "Point Issues",
   },
   {
     id: 16,
-    error: "DBSWIT Target Not Found",
+    error: "FAILED Point Status",
     symptoms:
-      "The DBSWIT (database switch) command executes but the target program or controller does not activate. A fault is logged indicating the switch target is invalid or unreachable. The expected failover behavior does not occur.",
+      "A point displays FAILED status. The point value may read zero or last known good value. Control logic depending on the point produces incorrect results.",
     rootCause:
-      "The DBSWIT command references a target program name or controller address that does not exist in the current database, has been renamed, or is on a panel that is offline or unreachable on the network at the time of execution.",
-    fix: "Verify the exact target name and address specified in the DBSWIT statement against the current database. Confirm the target panel is online and communicating. Update the DBSWIT statement with the correct target name. If the target was removed, update the failover logic accordingly. Re-compile and re-download.",
+      "The FAILED status indicator means the field panel cannot communicate with the physical device connected to the point (sensor, actuator, etc.). Causes include wiring faults, failed devices, or communication bus errors.",
+    fix: "Check physical wiring between the field panel and the device. Verify the device is powered and functioning. Check for FLN bus communication issues. Use the point status indicator in PPCL to add fallback logic: IF (SENSOR.EQ.FAILED) THEN use a default value.",
     category: "Point Issues",
   },
 
-  // ---- Program Flow --------------------------------------------------------
+  // ── Program Flow ──────────────────────────────────────────────────────────
   {
     id: 17,
-    error: "Resident vs Non-Resident Program Conflict",
+    error: "Unequal Program Execution Rates",
     symptoms:
-      "A program that was functioning correctly stops executing after a panel restart or power cycle. Logic that ran continuously now only executes on demand or not at all. Points controlled by the program revert to default or last-known values.",
+      "When multiple programs run on the same APOGEE field panel, shorter programs execute more frequently than longer ones. A 10-line program executes five times before a 50-line program completes once.",
     rootCause:
-      "PPCL programs are designated as either Resident (run continuously on every controller scan) or Non-Resident (run only when explicitly called). If a program's residency flag is set incorrectly, it will not execute at the expected frequency, particularly after a power cycle that resets runtime state.",
-    fix: "Review the program header and controller database to confirm the residency flag matches the intended behavior. Programs controlling active HVAC sequences should typically be Resident. Change the residency setting, re-download, and verify the program executes on every scan by monitoring output updates in real time.",
+      "APOGEE field panels sequentially execute one line of each enabled program in a round-robin fashion. Programs with fewer lines complete faster and restart sooner. This causes uneven execution rates when programs have very different lengths.",
+    fix: "Create programs that are roughly the same number of lines. Pad shorter programs with comment lines if needed. Consider consolidating very short programs into a single larger program. Be aware that time-based commands may behave differently in short vs. long programs.",
     category: "Program Flow",
   },
   {
     id: 18,
-    error: "GOTO Causing Unreachable Code",
+    error: "Subroutine Call Stack Overflow",
     symptoms:
-      "A section of the program never executes. Points that should be commanded by the skipped code remain at their initial or last-known values. The program completes without error but produces incorrect results.",
+      "Field panel watchdog trips. Program is marked as faulted. Other programs on the panel may be delayed or stopped.",
     rootCause:
-      "An unconditional GOTO statement transfers execution past a block of code, making that block permanently unreachable. This is often introduced when refactoring logic or when a conditional was accidentally removed.",
-    fix: "Trace all GOTO statements to their target line numbers. Identify any code blocks that have no execution path leading into them. Either remove the dead code or fix the GOTO condition to make the code conditional. Re-compile and re-download. Use structured IF/ENDIF blocks in preference to GOTO where possible.",
+      "Nested GOSUB calls exceed the field panel's call stack depth. This can occur from deeply nested subroutines or circular subroutine calls where subroutine A calls B which calls A. The $ARG1-$ARG15 parameter passing mechanism shares state across the call stack.",
+    fix: "Map the call graph of all GOSUB statements. Eliminate circular call chains. Reduce nesting depth. Use $LOC1-$LOC15 local variables instead of $ARG variables when possible to avoid parameter conflicts in nested calls. Each subroutine must end with RETURN.",
     category: "Program Flow",
   },
   {
     id: 19,
-    error: "LOCAL Variable Scope Error",
+    error: "ACT/DEACT Range Overlap",
     symptoms:
-      "A LOCAL variable retains a stale value from a previous scan or program invocation, causing incorrect calculations. Alternatively, a LOCAL variable initialized in one block is referenced outside its valid scope, producing a zero or null value unexpectedly.",
+      "A line range that should be deactivated continues to execute, or a range that should be active is unexpectedly deactivated. Equipment control becomes unpredictable.",
     rootCause:
-      "LOCAL variables in PPCL are scoped to the program but not automatically re-initialized each scan unless explicitly set. If the program assumes a LOCAL variable starts at zero each scan without initializing it, accumulated values or leftover state from the prior scan can corrupt calculations.",
-    fix: "Add explicit initialization of all LOCAL variables at the top of the program or at the beginning of each execution path that depends on a fresh value (e.g., LOCAL_SUM = 0 before a summation loop). Review variable lifetime expectations against the PPCL language specification for the target controller.",
+      "Multiple ACT and DEACT commands reference overlapping line ranges. When ranges overlap, the last command to execute determines the state, which varies based on program flow. This creates race conditions in the program logic.",
+    fix: "Define non-overlapping line ranges for ACT/DEACT pairs. Document the purpose and range of each ACT/DEACT pair with comment lines. Use sequential, non-overlapping ranges (e.g., 2000-2100 for cooling, 3000-3100 for heating). Consider using ENABLE/DISABL as an alternative.",
     category: "Program Flow",
   },
   {
     id: 20,
-    error: "Time Schedule Conflict",
+    error: "GOTO Creating Unreachable Code",
     symptoms:
-      "Equipment starts or stops at unexpected times, or two conflicting commands are issued within the same time window. Operators observe the equipment cycling between on and off rapidly, or occupancy mode does not match the intended schedule.",
+      "A section of the program never executes. Points controlled by the skipped code remain at initial or last-known values. Program completes without error but produces incorrect results.",
     rootCause:
-      "Multiple PPCL programs or Metasys schedules are writing to the same occupancy or command point with overlapping or conflicting time windows. Without a clear priority hierarchy, the last write wins, producing unpredictable behavior depending on program scan order.",
-    fix: "Audit all programs and Metasys schedules that write to the affected point. Consolidate schedule logic into a single authoritative program or schedule object. Establish a clear priority hierarchy and remove redundant schedule writes. Document the intended schedule logic and verify with the building owner.",
-    category: "Program Flow",
-  },
-  {
-    id: 21,
-    error: "Infinite Recursion via GOSUB",
-    symptoms:
-      "Controller watchdog trips shortly after the program starts executing. Scan time spikes to maximum before the reset. The program is marked as faulted. Other programs on the panel may be delayed or stopped.",
-    rootCause:
-      "A GOSUB statement calls a subroutine that, directly or indirectly, calls back into the originating subroutine before a RETURN is reached, creating an unbounded recursive call chain. PPCL controllers have a limited call stack and will fault when it overflows.",
-    fix: "Map the call graph of all GOSUB statements. Identify any circular call chains. Restructure the logic to eliminate recursion, using flags or state variables to sequence through subroutine steps across multiple scans instead of recursive calls. Re-compile and re-download.",
+      "An unconditional GOTO statement transfers execution past a block of code, making that block permanently unreachable. This is often introduced during program modifications or when conditional logic was accidentally removed.",
+    fix: "Trace all GOTO statements to their target line numbers. Identify any code blocks with no execution path. Either remove dead code or restructure the GOTO logic. Use IF/THEN/ELSE conditional logic instead of GOTO where possible. Test with comment lines to verify execution paths.",
     category: "Program Flow",
   },
 
-  // ---- Configuration -------------------------------------------------------
+  // ── Configuration ─────────────────────────────────────────────────────────
+  {
+    id: 21,
+    error: "SSTO Incorrect Start/Stop Times",
+    symptoms:
+      "Equipment starts too early or too late for occupancy. Building is not at comfort conditions when occupants arrive. Energy is wasted by starting equipment unnecessarily early.",
+    rootCause:
+      "SSTO (Start/Stop Time Optimization) coefficients do not match the building's actual thermal characteristics. The heating and cooling rate constants in SSTOCO are incorrect for the building mass, insulation, and HVAC capacity.",
+    fix: "Recalculate SSTOCO coefficients based on actual building thermal performance. Monitor actual start-to-comfort times over several days and adjust coefficients. Verify the SSTO command has access to accurate outside air temperature and space temperature points. Ensure SSTO commands are evaluated through every program pass.",
+    category: "Configuration",
+  },
   {
     id: 22,
-    error: "ALARM Threshold Misconfigured",
+    error: "TOD Schedule Not Executing",
     symptoms:
-      "Alarms fire continuously or never fire when expected. The front-end shows alarm conditions that do not reflect actual field conditions. Operators lose trust in the alarm system and begin ignoring notifications.",
+      "Time-of-day scheduled events do not fire. Equipment stays in night mode during occupied hours or remains running during unoccupied periods.",
     rootCause:
-      "The ALARM statement's high or low threshold values were entered in the wrong engineering units, set too close to normal operating values, or the deadband (hysteresis) was not configured, causing the alarm to chatter as the value oscillates around the threshold.",
-    fix: "Review the ALARM statement parameters: confirm the threshold values are in the correct engineering units and are consistent with the point's configured range. Add or increase the deadband value to prevent chattering. Coordinate threshold values with the building owner or design engineer to reflect operational requirements.",
+      "The TOD command is inside a conditional block (IF/THEN) or deactivated line range, so it is not evaluated on every program pass. TOD, TODSET, and TODMOD commands must be evaluated through every pass for proper operation. Alternatively, the field panel clock may be incorrect.",
+    fix: "Move TOD commands outside of all conditional blocks and deactivated ranges. Verify the field panel's real-time clock is accurate. Check DST settings. Confirm the time format matches PPCL expectations (decimal time for TOD/TODSET).",
     category: "Configuration",
   },
   {
     id: 23,
-    error: "Incorrect Controller Address",
+    error: "ADAPTM/ADAPTS Control Instability",
     symptoms:
-      "Download fails with a 'controller not found' or 'address conflict' error. Two panels on the same network trunk may exhibit erratic behavior as they respond to the same address. Communication faults are logged on the affected trunk.",
+      "Adaptive control output oscillates or saturates. Controlled process drifts from setpoint. Temperature swings exceed acceptable limits.",
     rootCause:
-      "Two or more controllers on the same N2 or SA Bus network trunk have been assigned the same device address, or the address configured in the controller hardware (DIP switches or firmware setting) does not match the address recorded in the front-end database.",
-    fix: "Survey all controllers on the affected trunk and document their physical address settings. Resolve any duplicate addresses by changing the DIP switch or firmware address setting on the conflicting unit and updating the front-end database to match. Cycle power on the affected controllers and verify unique addressing before re-downloading programs.",
+      "The adaptive control algorithm parameters (proportional band, integral time, derivative time, output limits) are not properly tuned for the specific mechanical system being controlled. System response characteristics may have changed since initial commissioning.",
+    fix: "Review ADAPTM/ADAPTS parameters against the mechanical system characteristics. Start with conservative tuning values and gradually tighten. Verify sensor readings are accurate and representative of the controlled space. Check that the control output range matches the actuator range.",
     category: "Configuration",
   },
   {
     id: 24,
-    error: "Scan Rate Mismatch",
+    error: "PDL Load Shedding Incorrect",
     symptoms:
-      "Control loops respond sluggishly or oscillate. Time-sensitive sequences (e.g., economizer transitions) execute at the wrong frequency. Outputs that should update every 5 seconds may only update every 30 seconds or vice versa.",
+      "Loads are shed in the wrong order. Critical equipment is shut down before non-critical loads. Peak demand still exceeds the setpoint despite load shedding.",
     rootCause:
-      "The program's configured execution interval (scan rate) does not match the time constants of the process being controlled. A scan rate that is too slow misses rapid process changes; a scan rate that is too fast wastes controller resources and can interfere with other programs.",
-    fix: "Determine the appropriate scan rate based on the process time constant (e.g., airside loops typically 5-15 seconds, hydronic loops 30-60 seconds). Update the program's execution interval in the controller database. Re-download and monitor control stability. Adjust PID tuning parameters if the scan rate change affects loop stability.",
+      "PDL (Peak Demand Limiting) configuration is incorrect. PDLDAT load priority assignments do not match operational importance. PDLMTR meter monitoring parameters are misconfigured. PDLSET demand setpoint is too high or the deadband is too wide.",
+    fix: "Review PDLDAT priority assignments to ensure critical loads have the highest priority (shed last). Verify PDLMTR meter calibration and pulse rate configuration. Adjust PDLSET demand target and deadband. Consider minimum on/off times for equipment protection.",
     category: "Configuration",
   },
   {
     id: 25,
-    error: "Sensor Calibration Offset Not Applied",
+    error: "Firmware Compatibility Issue",
     symptoms:
-      "Measured values are consistently offset from reference measurements (e.g., a space temperature sensor reads 3 degrees F high compared to a calibrated thermometer). Control setpoints appear correct but the space is not maintained at the intended condition.",
+      "A PPCL command is rejected by the field panel. Program downloads successfully on one panel type but fails on another. Certain commands produce unexpected results.",
     rootCause:
-      "The sensor or point configuration does not include a calibration offset to correct for sensor drift, installation effects, or manufacturing tolerance. PPCL uses the raw scaled value without compensation, resulting in systematic error in all calculations using that point.",
-    fix: "Measure the actual value with a calibrated reference instrument. Calculate the offset (reference minus sensor reading). Apply the offset either in the point database calibration field (preferred) or in the PPCL program by adding the offset constant to the raw point value before use. Document the calibration date and offset value.",
-    category: "Configuration",
-  },
-  {
-    id: 26,
-    error: "Missing Network Point Publication",
-    symptoms:
-      "A point value shared from one controller to another reads zero, null, or the last known good value on the receiving panel. Programs on the receiving panel that depend on the shared point compute incorrect results. No explicit error is logged; the failure is silent.",
-    rootCause:
-      "The source controller is not configured to publish (broadcast) the point value onto the network at the required poll rate. This occurs when a point is added to the source panel's database but the publication or binding configuration is not completed in the front-end.",
-    fix: "Open the source panel's network configuration in the front-end. Locate the point and enable publication or verify the binding between source and destination. Set an appropriate publication rate. Force a manual refresh and confirm the receiving panel updates. Add monitoring logic in the receiving program to detect stale values.",
-    category: "Configuration",
-  },
-  {
-    id: 27,
-    error: "Daylight Saving Time Transition Fault",
-    symptoms:
-      "At DST transitions, time-based schedules execute at the wrong time for up to one hour. Scheduled start/stop commands for HVAC equipment occur one hour early or late. Alarms tied to time windows fire incorrectly on transition days.",
-    rootCause:
-      "The controller's real-time clock is not configured to automatically adjust for Daylight Saving Time, or the DST offset rules stored in the controller do not match the local jurisdiction's current DST schedule. Some older controllers require manual clock adjustment.",
-    fix: "Verify the controller's DST configuration in the system setup menu. Confirm the DST start and end dates and the offset value match the current jurisdiction rules. Enable automatic DST adjustment if supported. For controllers without automatic adjustment, add a maintenance task to manually update the clock at each DST transition. Verify schedule accuracy after each transition.",
+      "Not all PPCL commands are available on all firmware types. The PPCL manual's compatibility bar shows which commands are supported on Unitary, pre-APOGEE, APOGEE, and BACnet firmware. Some commands require minimum firmware revision levels.",
+    fix: "Check the compatibility bar in Chapter 3 of the PPCL User's Manual for each command used. Verify the field panel's firmware type and revision. Replace unsupported commands with equivalent logic using available commands. Consider firmware upgrades if critical commands are needed.",
     category: "Configuration",
   },
 ];

@@ -107,6 +107,22 @@ export const PPCL_KEYWORDS = [
   "THEN", "ELSE",
 ] as const;
 
+/**
+ * Bare-form reserved words from Appendix A.
+ * These are the operator/priority names without their dot or sigil prefixes,
+ * listed separately in the manual's reserved word table.
+ */
+export const PPCL_BARE_RESERVED = [
+  // Bare relational operators
+  "EQ", "NE", "GT", "LT", "GE", "LE", "EQUAL",
+  // Bare logical operators
+  "AND", "OR", "NAND", "XOR", "NOR",
+  // Bare math
+  "ROOT",
+  // Bare priority names
+  "EMER", "NONE", "OPER", "SMOKE",
+] as const;
+
 /** Complete reserved word set for validation */
 export const ALL_RESERVED_WORDS = new Set<string>([
   ...PPCL_COMMANDS,
@@ -119,6 +135,7 @@ export const ALL_RESERVED_WORDS = new Set<string>([
   ...PPCL_PRIORITY_INDICATORS,
   ...PPCL_LOCAL_VARS,
   ...PPCL_KEYWORDS,
+  ...PPCL_BARE_RESERVED,
   "C", // Comment line marker
 ]);
 
@@ -303,8 +320,8 @@ function ruleGotoDirection(parsed: ParsedLine[], issues: LintIssue[]) {
   for (const p of parsed) {
     if (p.isEmpty || p.isComment || p.ppclLineNum === null) continue;
     const upper = p.content.toUpperCase();
-    // Match GOTO(linenum) or GOTO (linenum)
-    const gotoMatch = upper.match(/\bGOTO\s*\(\s*(\d+)\s*\)/);
+    // Manual syntax: GOTO line# (no parentheses)
+    const gotoMatch = upper.match(/\bGOTO\s+(\d+)\b/);
     if (gotoMatch) {
       const target = parseInt(gotoMatch[1], 10);
       if (target < p.ppclLineNum) {
@@ -313,7 +330,7 @@ function ruleGotoDirection(parsed: ParsedLine[], issues: LintIssue[]) {
           ppclLine: p.ppclLineNum,
           severity: "warning",
           rule: "D003",
-          message: `GOTO(${target}) jumps backward from line ${p.ppclLineNum} — risk of infinite loop`,
+          message: `GOTO ${target} jumps backward from line ${p.ppclLineNum} — risk of infinite loop`,
         });
       }
     }
@@ -373,8 +390,8 @@ function ruleGosubReturn(parsed: ParsedLine[], issues: LintIssue[]) {
     if (p.isEmpty || p.isComment) continue;
     const upper = p.content.toUpperCase();
 
-    // GOSUB(target_line)
-    const gosubMatch = upper.match(/\bGOSUB\s*\(\s*(\d+)\s*\)/);
+    // Manual syntax: GOSUB line# (space-separated, no parentheses around line#)
+    const gosubMatch = upper.match(/\bGOSUB\s+(\d+)\b/);
     if (gosubMatch && p.ppclLineNum !== null) {
       gosubTargets.push({
         target: parseInt(gosubMatch[1], 10),
@@ -461,28 +478,24 @@ function ruleActDeactTargets(parsed: ParsedLine[], issues: LintIssue[]) {
     if (p.isEmpty || p.isComment) continue;
     const upper = p.content.toUpperCase();
 
-    // ACT(start,end) or DEACT(start,end) or DISABL(start,end) or ENABLE(start,end)
-    const rangeMatch = upper.match(/\b(ACT|DEACT|DISABL|ENABLE)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
-    if (rangeMatch) {
-      const start = parseInt(rangeMatch[2], 10);
-      const end = parseInt(rangeMatch[3], 10);
-      if (start > end) {
-        issues.push({
-          line: p.editorLine,
-          ppclLine: p.ppclLineNum ?? undefined,
-          severity: "error",
-          rule: "S003",
-          message: `${rangeMatch[1]}(${start},${end}) — start line is greater than end line`,
-        });
-      }
-      if (!ppclLines.has(start)) {
-        issues.push({
-          line: p.editorLine,
-          ppclLine: p.ppclLineNum ?? undefined,
-          severity: "warning",
-          rule: "S004",
-          message: `${rangeMatch[1]} start line ${start} does not exist in program`,
-        });
+    // Manual syntax: ACT(line1,...,line16) — individual line numbers, NOT a range
+    const cmdMatch = upper.match(/\b(ACT|DEACT|DISABL|ENABLE)\s*\(([^)]+)\)/);
+    if (cmdMatch) {
+      const cmd = cmdMatch[1];
+      const args = cmdMatch[2].split(",").map(s => s.trim()).filter(Boolean);
+
+      for (const arg of args) {
+        const lineNum = parseInt(arg, 10);
+        if (isNaN(lineNum)) continue; // skip non-numeric args
+        if (!ppclLines.has(lineNum)) {
+          issues.push({
+            line: p.editorLine,
+            ppclLine: p.ppclLineNum ?? undefined,
+            severity: "warning",
+            rule: "S004",
+            message: `${cmd} target line ${lineNum} does not exist in program`,
+          });
+        }
       }
     }
   }
@@ -570,6 +583,5 @@ export const RULE_DESCRIPTIONS: Record<string, { name: string; category: string 
   D006: { name: "Dense THEN/ELSE chain", category: "Design Guidelines" },
   S001: { name: "GOSUB target missing", category: "Subroutines" },
   S002: { name: "Missing RETURN", category: "Subroutines" },
-  S003: { name: "Invalid line range", category: "Subroutines" },
-  S004: { name: "Range target missing", category: "Subroutines" },
+  S004: { name: "Target line missing", category: "Subroutines" },
 };

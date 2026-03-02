@@ -86,7 +86,7 @@ function highlightCode(code: string): React.ReactNode {
 
 function highlightLine(line: string): React.ReactNode {
   // Full-line comment
-  const commentMatch = line.match(/^(\s*\d*\s*)(C\s.*)$/i);
+  const commentMatch = line.match(/^(\s*\d*\s*)(C\s.*|C)$/i);
   if (commentMatch) {
     return (
       <>
@@ -127,7 +127,7 @@ const SAMPLE_CODE = `1000 C --- AHU-1 Supply Fan Control ---
 1030 IF (OATEMP.LT.65.0) THEN OFF(SFAN1)
 1040 IF (SFAN1.EQ.ON) THEN ENABLE(2000,2100)
 1050 ELSE DISABL(2000,2100)
-1060 GOSUB(3000)
+1060 GOSUB 3000
 1070 C
 2000 C --- Cooling Sequence ---
 2010 IF (SPACE1.GT.74.0) THEN ON(COOL1)
