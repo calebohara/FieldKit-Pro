@@ -208,9 +208,17 @@ export default function JobReportBuilder() {
       meta.technician,
       entries
     );
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    // Do not use noopener/noreferrer — it causes window.open() to return null
+    // on mobile browsers, preventing document access needed for print export.
+    const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      setShareStatus("Popup blocked. Enable popups to export PDF.");
+      const safeTitle = (meta.reportTitle || "field-service-report")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
+      downloadFile(`${safeTitle}.html`, html, "text/html");
+      setShareStatus(
+        "Popup blocked — downloaded report as HTML. Open the file and use your browser\u2019s print or share option to save as PDF."
+      );
       return;
     }
     printWindow.document.open();
@@ -219,7 +227,7 @@ export default function JobReportBuilder() {
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
-    }, 150);
+    }, 500);
   }
 
   async function handleShare() {
