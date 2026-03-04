@@ -42,7 +42,7 @@ interface JobReportContextType {
 const STORAGE_KEY = "fieldkit-job-report-v1";
 
 const defaultMeta: JobReportMeta = {
-  reportTitle: "Field Service Report",
+  reportTitle: "Field Tech Report",
   siteName: "",
   equipment: "",
   technician: "",

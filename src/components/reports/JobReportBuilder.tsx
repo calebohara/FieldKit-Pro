@@ -38,7 +38,7 @@ function buildTextReport(
   entries: JobReportEntry[]
 ) {
   const lines: string[] = [];
-  lines.push(title || "Field Service Report");
+  lines.push(title || "Field Tech Report");
   lines.push(`Generated: ${new Date().toLocaleString()}`);
   lines.push(`Site: ${siteName || "-"}`);
   lines.push(`Equipment: ${equipment || "-"}`);
@@ -63,63 +63,170 @@ function buildTextReport(
   return lines.join("\n");
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function buildPrintableHtml(
+function buildPdf(
   title: string,
   siteName: string,
   equipment: string,
   technician: string,
   entries: JobReportEntry[]
 ) {
-  const rows = entries
-    .map((entry, idx) => {
-      const details = entry.fields
-        ? Object.entries(entry.fields)
-            .map(
-              ([key, value]) =>
-                `<li><strong>${escapeHtml(key)}:</strong> ${escapeHtml(value)}</li>`
-            )
-            .join("")
-        : "";
+  // Dynamic import to avoid SSR issues
+  return import("jspdf").then(({ jsPDF }) => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
 
-      return `
-        <section style="margin:0 0 16px 0;padding:12px;border:1px solid #d1d5db;border-radius:8px;">
-          <h3 style="margin:0 0 8px 0;font-size:15px;">${idx + 1}. ${escapeHtml(renderTypeLabel(entry.type))} - ${escapeHtml(entry.title)}</h3>
-          <p style="margin:0 0 4px 0;font-size:12px;"><strong>Time:</strong> ${escapeHtml(formatTimestamp(entry.createdAt))}</p>
-          ${entry.source ? `<p style="margin:0 0 4px 0;font-size:12px;"><strong>Source:</strong> ${escapeHtml(entry.source)}</p>` : ""}
-          ${entry.summary ? `<p style="margin:0 0 6px 0;font-size:12px;"><strong>Summary:</strong> ${escapeHtml(entry.summary)}</p>` : ""}
-          ${details ? `<ul style="margin:0;padding-left:18px;font-size:12px;">${details}</ul>` : ""}
-        </section>
-      `;
-    })
-    .join("");
+    function checkPageBreak(needed: number) {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+    }
 
-  return `
-  <!doctype html>
-  <html>
-    <head>
-      <meta charset="utf-8" />
-      <title>${escapeHtml(title || "Field Service Report")}</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-    </head>
-    <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px;color:#0f172a;">
-      <h1 style="margin:0 0 8px 0;">${escapeHtml(title || "Field Service Report")}</h1>
-      <p style="margin:0 0 4px 0;font-size:13px;"><strong>Generated:</strong> ${escapeHtml(new Date().toLocaleString())}</p>
-      <p style="margin:0 0 4px 0;font-size:13px;"><strong>Site:</strong> ${escapeHtml(siteName || "-")}</p>
-      <p style="margin:0 0 4px 0;font-size:13px;"><strong>Equipment:</strong> ${escapeHtml(equipment || "-")}</p>
-      <p style="margin:0 0 16px 0;font-size:13px;"><strong>Technician:</strong> ${escapeHtml(technician || "-")}</p>
-      ${rows || "<p>No findings captured yet.</p>"}
-    </body>
-  </html>
-  `;
+    // Header line
+    doc.setDrawColor(30, 64, 175);
+    doc.setLineWidth(0.8);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 6;
+
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(15, 23, 42);
+    doc.text(title || "Field Tech Report", margin, y);
+    y += 8;
+
+    // Date
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), margin, y);
+    y += 8;
+
+    // Metadata
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    const metaItems = [
+      { label: "Site", value: siteName },
+      { label: "Equipment", value: equipment },
+      { label: "Technician", value: technician },
+      { label: "Entries", value: String(entries.length) },
+    ];
+    for (const item of metaItems) {
+      if (item.value) {
+        doc.setFont("helvetica", "bold");
+        doc.text(`${item.label}: `, margin, y);
+        const labelWidth = doc.getTextWidth(`${item.label}: `);
+        doc.setFont("helvetica", "normal");
+        doc.text(item.value, margin + labelWidth, y);
+        y += 5;
+      }
+    }
+    y += 4;
+
+    // Separator
+    doc.setDrawColor(209, 213, 219);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 6;
+
+    // Entries
+    if (entries.length === 0) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184);
+      doc.text("No findings captured.", margin, y);
+    } else {
+      entries.forEach((entry, idx) => {
+        checkPageBreak(28);
+
+        // Entry header
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        const heading = `${idx + 1}. ${renderTypeLabel(entry.type)} — ${entry.title}`;
+        const headingLines = doc.splitTextToSize(heading, contentWidth);
+        doc.text(headingLines, margin, y);
+        y += headingLines.length * 5;
+
+        // Timestamp
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text(formatTimestamp(entry.createdAt), margin + 2, y);
+        y += 4;
+
+        // Source
+        if (entry.source) {
+          doc.setFont("helvetica", "italic");
+          doc.text(`Source: ${entry.source}`, margin + 2, y);
+          y += 4;
+        }
+
+        // Summary
+        if (entry.summary) {
+          checkPageBreak(8);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          doc.setTextColor(51, 65, 85);
+          const summaryLines = doc.splitTextToSize(entry.summary, contentWidth - 4);
+          doc.text(summaryLines, margin + 2, y);
+          y += summaryLines.length * 4;
+        }
+
+        // Fields
+        if (entry.fields && Object.keys(entry.fields).length > 0) {
+          checkPageBreak(6);
+          y += 1;
+          for (const [key, value] of Object.entries(entry.fields)) {
+            checkPageBreak(5);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(15, 23, 42);
+            const fieldLabel = `${key}: `;
+            doc.text(fieldLabel, margin + 4, y);
+            const flw = doc.getTextWidth(fieldLabel);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(51, 65, 85);
+            const valLines = doc.splitTextToSize(value, contentWidth - 6 - flw);
+            doc.text(valLines, margin + 4 + flw, y);
+            y += valLines.length * 4;
+          }
+        }
+
+        y += 5;
+
+        // Entry separator
+        if (idx < entries.length - 1) {
+          checkPageBreak(4);
+          doc.setDrawColor(226, 232, 240);
+          doc.setLineWidth(0.2);
+          doc.line(margin + 2, y - 2, pageWidth - margin - 2, y - 2);
+          y += 2;
+        }
+      });
+    }
+
+    // Footer on each page
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `${title || "Field Tech Report"} — Page ${i} of ${totalPages}`,
+        margin,
+        pageHeight - 10
+      );
+      doc.text("Generated by FieldKit Pro", pageWidth - margin - doc.getTextWidth("Generated by FieldKit Pro"), pageHeight - 10);
+    }
+
+    return doc;
+  });
 }
 
 export default function JobReportBuilder() {
@@ -145,7 +252,7 @@ export default function JobReportBuilder() {
   );
 
   const reportSummary = useMemo(() => {
-    return `${meta.reportTitle || "Field Service Report"} | ${entries.length} entries | ${meta.siteName || "No site specified"}`;
+    return `${meta.reportTitle || "Field Tech Report"} | ${entries.length} entries | ${meta.siteName || "No site specified"}`;
   }, [meta.reportTitle, meta.siteName, entries.length]);
 
   function handleAddNote() {
@@ -182,7 +289,7 @@ export default function JobReportBuilder() {
   }
 
   function handleExportText() {
-    const safeTitle = (meta.reportTitle || "field-service-report")
+    const safeTitle = (meta.reportTitle || "field-tech-report")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-");
     downloadFile(`${safeTitle}.txt`, reportText, "text/plain");
@@ -194,39 +301,33 @@ export default function JobReportBuilder() {
       meta,
       entries,
     };
-    const safeTitle = (meta.reportTitle || "field-service-report")
+    const safeTitle = (meta.reportTitle || "field-tech-report")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-");
     downloadFile(`${safeTitle}.json`, JSON.stringify(payload, null, 2), "application/json");
   }
 
-  function handleExportPdfPrint() {
-    const html = buildPrintableHtml(
-      meta.reportTitle,
-      meta.siteName,
-      meta.equipment,
-      meta.technician,
-      entries
-    );
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!printWindow) {
-      setShareStatus("Popup blocked. Enable popups to export PDF.");
-      return;
+  async function handleExportPdf() {
+    try {
+      const doc = await buildPdf(
+        meta.reportTitle,
+        meta.siteName,
+        meta.equipment,
+        meta.technician,
+        entries
+      );
+      const dateStr = new Date().toISOString().slice(0, 10);
+      doc.save(`Field-Tech-Report-${dateStr}.pdf`);
+    } catch {
+      setShareStatus("Failed to generate PDF. Please try again.");
     }
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 150);
   }
 
   async function handleShare() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: meta.reportTitle || "Field Service Report",
+          title: meta.reportTitle || "Field Tech Report",
           text: `${reportSummary}\n\n${reportText}`,
         });
         setShareStatus("Shared successfully.");
@@ -385,10 +486,10 @@ export default function JobReportBuilder() {
         <h2 className="text-lg font-semibold">Export / Share</h2>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={handleExportPdfPrint}
+            onClick={handleExportPdf}
             className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--primary)] text-white min-h-11"
           >
-            Export PDF (Print)
+            Export PDF
           </button>
           <button
             onClick={handleExportText}
