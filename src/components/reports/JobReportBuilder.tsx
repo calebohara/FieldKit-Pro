@@ -70,159 +70,179 @@ function buildPdf(
   technician: string,
   entries: JobReportEntry[]
 ) {
-  // Dynamic import to avoid SSR issues
   return import("jspdf").then(({ jsPDF }) => {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 18;
-    const contentWidth = pageWidth - margin * 2;
-    let y = margin;
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const m = 20;
+    const cw = pw - m * 2;
+    let y = m;
 
-    function checkPageBreak(needed: number) {
-      if (y + needed > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
+    const dark = [30, 41, 59] as const;     // slate-800
+    const mid = [100, 116, 139] as const;    // slate-500
+    const light = [148, 163, 184] as const;  // slate-400
+    const bg = [248, 250, 252] as const;     // slate-50
+
+    function pageBreak(needed: number) {
+      if (y + needed > ph - 20) { doc.addPage(); y = m; }
     }
 
-    // Header line
-    doc.setDrawColor(30, 64, 175);
-    doc.setLineWidth(0.8);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 6;
-
-    // Title
+    // ── Title
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(15, 23, 42);
-    doc.text(title || "Field Tech Report", margin, y);
-    y += 8;
+    doc.setFontSize(22);
+    doc.setTextColor(...dark);
+    doc.text(title || "Field Tech Report", m, y);
+    y += 7;
 
-    // Date
+    // ── Date
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), margin, y);
-    y += 8;
+    doc.setFontSize(9);
+    doc.setTextColor(...mid);
+    doc.text(
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      m,
+      y
+    );
+    y += 10;
 
-    // Metadata
-    doc.setFontSize(10);
-    doc.setTextColor(15, 23, 42);
-    const metaItems = [
-      { label: "Site", value: siteName },
-      { label: "Equipment", value: equipment },
-      { label: "Technician", value: technician },
-      { label: "Entries", value: String(entries.length) },
-    ];
-    for (const item of metaItems) {
-      if (item.value) {
-        doc.setFont("helvetica", "bold");
-        doc.text(`${item.label}: `, margin, y);
-        const labelWidth = doc.getTextWidth(`${item.label}: `);
+    // ── Metadata box
+    const metaPairs = [
+      ["Site", siteName],
+      ["Equipment", equipment],
+      ["Technician", technician],
+    ].filter(([, v]) => v) as [string, string][];
+
+    if (metaPairs.length > 0) {
+      const boxH = Math.ceil(metaPairs.length / 2) * 6 + 6;
+      doc.setFillColor(...bg);
+      doc.roundedRect(m, y - 3, cw, boxH, 2, 2, "F");
+
+      const colW = cw / 2;
+      metaPairs.forEach(([label, value], i) => {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const tx = m + 4 + col * colW;
+        const ty = y + 1 + row * 6;
         doc.setFont("helvetica", "normal");
-        doc.text(item.value, margin + labelWidth, y);
-        y += 5;
-      }
+        doc.setFontSize(8);
+        doc.setTextColor(...mid);
+        doc.text(label.toUpperCase(), tx, ty);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(...dark);
+        doc.text(value, tx, ty + 3.5);
+      });
+
+      y += boxH + 6;
     }
-    y += 4;
 
-    // Separator
-    doc.setDrawColor(209, 213, 219);
-    doc.setLineWidth(0.3);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 6;
-
-    // Entries
+    // ── Entries
     if (entries.length === 0) {
       doc.setFont("helvetica", "italic");
-      doc.setFontSize(10);
-      doc.setTextColor(148, 163, 184);
-      doc.text("No findings captured.", margin, y);
+      doc.setFontSize(9);
+      doc.setTextColor(...light);
+      doc.text("No findings captured.", m, y);
     } else {
+      // Section label
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...mid);
+      doc.text(`FINDINGS  (${entries.length})`, m, y);
+      y += 6;
+
       entries.forEach((entry, idx) => {
-        checkPageBreak(28);
+        pageBreak(22);
 
-        // Entry header
+        // Entry number + type tag
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(15, 23, 42);
-        const heading = `${idx + 1}. ${renderTypeLabel(entry.type)} — ${entry.title}`;
-        const headingLines = doc.splitTextToSize(heading, contentWidth);
-        doc.text(headingLines, margin, y);
-        y += headingLines.length * 5;
+        doc.setFontSize(10);
+        doc.setTextColor(...dark);
+        const num = `${idx + 1}.`;
+        doc.text(num, m, y);
+        const numW = doc.getTextWidth(num) + 2;
 
-        // Timestamp
+        // Type as uppercase tag
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(formatTimestamp(entry.createdAt), margin + 2, y);
-        y += 4;
+        doc.setFontSize(7);
+        doc.setTextColor(...mid);
+        const tag = renderTypeLabel(entry.type).toUpperCase();
+        doc.text(tag, m + numW, y - 0.3);
+        const tagW = doc.getTextWidth(tag) + 3;
 
-        // Source
-        if (entry.source) {
-          doc.setFont("helvetica", "italic");
-          doc.text(`Source: ${entry.source}`, margin + 2, y);
-          y += 4;
-        }
+        // Title inline after tag
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...dark);
+        const titleX = m + numW + tagW;
+        const titleLines = doc.splitTextToSize(entry.title, cw - numW - tagW);
+        doc.text(titleLines, titleX, y);
+        y += titleLines.length * 4.5 + 1.5;
+
+        // Timestamp + source on one line
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...light);
+        let subline = formatTimestamp(entry.createdAt);
+        if (entry.source) subline += `  ·  ${entry.source}`;
+        doc.text(subline, m + 6, y);
+        y += 4.5;
 
         // Summary
         if (entry.summary) {
-          checkPageBreak(8);
+          pageBreak(8);
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
-          doc.setTextColor(51, 65, 85);
-          const summaryLines = doc.splitTextToSize(entry.summary, contentWidth - 4);
-          doc.text(summaryLines, margin + 2, y);
-          y += summaryLines.length * 4;
+          doc.setTextColor(...dark);
+          const lines = doc.splitTextToSize(entry.summary, cw - 6);
+          doc.text(lines, m + 6, y);
+          y += lines.length * 4 + 1;
         }
 
-        // Fields
+        // Fields as key: value pairs
         if (entry.fields && Object.keys(entry.fields).length > 0) {
-          checkPageBreak(6);
-          y += 1;
+          pageBreak(6);
           for (const [key, value] of Object.entries(entry.fields)) {
-            checkPageBreak(5);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
-            doc.setTextColor(15, 23, 42);
-            const fieldLabel = `${key}: `;
-            doc.text(fieldLabel, margin + 4, y);
-            const flw = doc.getTextWidth(fieldLabel);
+            pageBreak(5);
             doc.setFont("helvetica", "normal");
-            doc.setTextColor(51, 65, 85);
-            const valLines = doc.splitTextToSize(value, contentWidth - 6 - flw);
-            doc.text(valLines, margin + 4 + flw, y);
-            y += valLines.length * 4;
+            doc.setFontSize(8);
+            doc.setTextColor(...mid);
+            const lbl = `${key}: `;
+            doc.text(lbl, m + 6, y);
+            const lw = doc.getTextWidth(lbl);
+            doc.setTextColor(...dark);
+            const vLines = doc.splitTextToSize(value, cw - 8 - lw);
+            doc.text(vLines, m + 6 + lw, y);
+            y += vLines.length * 3.5 + 0.5;
           }
         }
 
-        y += 5;
+        y += 4;
 
-        // Entry separator
+        // Hairline separator between entries
         if (idx < entries.length - 1) {
-          checkPageBreak(4);
-          doc.setDrawColor(226, 232, 240);
-          doc.setLineWidth(0.2);
-          doc.line(margin + 2, y - 2, pageWidth - margin - 2, y - 2);
-          y += 2;
+          pageBreak(3);
+          doc.setDrawColor(230, 232, 236);
+          doc.setLineWidth(0.15);
+          doc.line(m, y - 1.5, pw - m, y - 1.5);
+          y += 3;
         }
       });
     }
 
-    // Footer on each page
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
+    // ── Footer on each page
+    const total = doc.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
       doc.setPage(i);
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
-      doc.text(
-        `${title || "Field Tech Report"} — Page ${i} of ${totalPages}`,
-        margin,
-        pageHeight - 10
-      );
-      doc.text("Generated by FieldKit Pro", pageWidth - margin - doc.getTextWidth("Generated by FieldKit Pro"), pageHeight - 10);
+      doc.setFontSize(7);
+      doc.setTextColor(...light);
+      const pg = `${i} / ${total}`;
+      doc.text(pg, pw - m - doc.getTextWidth(pg), ph - 12);
     }
 
     return doc;
