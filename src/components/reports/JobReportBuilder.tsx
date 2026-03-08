@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useJobReport,
   type JobReportEntry,
@@ -311,8 +311,99 @@ function buildPdf(
   });
 }
 
+/* ─── Clear Confirmation Dialog ─── */
+function ClearConfirmDialog({
+  open,
+  onConfirm,
+  onCancel,
+  entryCount,
+}: {
+  open: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  entryCount: number;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "var(--overlay-backdrop)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl p-5 space-y-4"
+        style={{
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.2)",
+        }}
+      >
+        <div>
+          <h3 className="text-base font-semibold text-[var(--foreground)]">Clear report?</h3>
+          <p className="text-sm text-[var(--muted-foreground)] mt-1">
+            This will remove {entryCount} {entryCount === 1 ? "entry" : "entries"} and reset all fields. Saved data will be deleted from this browser.
+          </p>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            className="px-3 py-2 rounded-md text-sm font-medium border border-[var(--border)] hover:bg-[var(--accent)]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--destructive)] text-white"
+          >
+            Clear everything
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Autosave Indicator ─── */
+function AutosaveIndicator({ lastSavedAt }: { lastSavedAt: string | null }) {
+  const [label, setLabel] = useState("");
+
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    function update() {
+      const diff = Date.now() - new Date(lastSavedAt!).getTime();
+      if (diff < 5000) setLabel("Saved");
+      else if (diff < 60000) setLabel(`Saved ${Math.floor(diff / 1000)}s ago`);
+      else setLabel(`Saved ${Math.floor(diff / 60000)}m ago`);
+    }
+    update();
+    const id = setInterval(update, 10000);
+    return () => clearInterval(id);
+  }, [lastSavedAt]);
+
+  if (!lastSavedAt || !label) return null;
+
+  return (
+    <span className="text-xs text-[var(--muted-foreground)] flex items-center gap-1">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+      {label}
+    </span>
+  );
+}
+
 export default function JobReportBuilder() {
-  const { meta, entries, updateMeta, addEntry, removeEntry, clearEntries } =
+  const { meta, entries, storageStatus, updateMeta, addEntry, removeEntry, clearAll } =
     useJobReport();
 
   const [noteText, setNoteText] = useState("");
@@ -320,6 +411,12 @@ export default function JobReportBuilder() {
   const [oldValue, setOldValue] = useState("");
   const [newValue, setNewValue] = useState("");
   const [shareStatus, setShareStatus] = useState("");
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+
+  const handleClearConfirm = useCallback(() => {
+    clearAll();
+    setClearDialogOpen(false);
+  }, [clearAll]);
 
   const reportText = useMemo(
     () =>
@@ -536,15 +633,42 @@ export default function JobReportBuilder() {
         </div>
       </section>
 
+      <ClearConfirmDialog
+        open={clearDialogOpen}
+        onConfirm={handleClearConfirm}
+        onCancel={() => setClearDialogOpen(false)}
+        entryCount={entries.length}
+      />
+
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-3">
         <div className="flex flex-wrap items-center gap-2 justify-between">
-          <h2 className="text-lg font-semibold">Captured Entries ({entries.length})</h2>
-          <button
-            onClick={clearEntries}
-            className="px-3 py-2 rounded-md text-sm font-medium border border-[var(--border)] hover:bg-[var(--accent)]"
-          >
-            Clear all
-          </button>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold">Captured Entries ({entries.length})</h2>
+            <AutosaveIndicator lastSavedAt={storageStatus.lastSavedAt} />
+          </div>
+          <div className="flex items-center gap-2">
+            {storageStatus.sizeBytes > 0 && (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                style={{
+                  background: "var(--accent)",
+                  color: "var(--muted-foreground)",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                </svg>
+                {storageStatus.sizeLabel}
+              </span>
+            )}
+            <button
+              onClick={() => setClearDialogOpen(true)}
+              disabled={entries.length === 0 && !meta.siteName && !meta.equipment && !meta.technician}
+              className="px-3 py-2 rounded-md text-sm font-medium border border-[var(--border)] hover:bg-[var(--accent)] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Clear all
+            </button>
+          </div>
         </div>
 
         {entries.length === 0 && (
