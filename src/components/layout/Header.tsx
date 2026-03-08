@@ -19,7 +19,7 @@ export default function Header() {
 
   return (
     <header
-      className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--card)] md:px-6"
+      className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--card)] md:px-6 md:sticky md:top-0 md:z-20"
       style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 12px)" }}
     >
       <h2 className="text-lg font-semibold md:hidden flex items-center gap-2">
