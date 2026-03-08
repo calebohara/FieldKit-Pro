@@ -227,14 +227,47 @@ function calculatePID(
   const base = baseValues[processType];
   const [pFactor, iFactor, dFactor] = overshootFactors[overshoot];
 
+  // Clamp response time to valid range
+  const rt = Math.max(5, Math.min(600, responseTime || 60));
+
   // Scale by response time — longer response = less aggressive
-  const timeScale = 60 / Math.max(responseTime, 10);
+  const timeScale = 60 / rt;
 
   return {
     p: Math.round(base.p * pFactor * (1 + timeScale * 0.3) * 10) / 10,
-    i: Math.round(base.i * iFactor * (responseTime / 60) * 10) / 10,
-    d: Math.round(base.d * dFactor * (responseTime / 60) * 10) / 10,
+    i: Math.round(base.i * iFactor * (rt / 60) * 10) / 10,
+    d: Math.round(base.d * dFactor * (rt / 60) * 10) / 10,
   };
+}
+
+/** Convert gain (Kp) to proportional band percentage: PB% = 100 / Kp */
+function gainToPB(kp: number): number {
+  if (kp <= 0) return 999;
+  return Math.round((100 / kp) * 10) / 10;
+}
+
+/** Get stability assessment based on PID values and process type */
+function getStabilityNote(
+  pid: PIDValues,
+  processType: ProcessType,
+  overshoot: OvershootTolerance
+): { level: "stable" | "caution" | "aggressive"; message: string } {
+  // High gain on slow processes is risky
+  if (pid.p > 12 && (processType === "heating" || processType === "cooling")) {
+    return { level: "aggressive", message: "High gain on a thermal loop — watch for oscillation. Reduce P if output hunts." };
+  }
+  // Very short integral on slow processes
+  if (pid.i < 30 && (processType === "heating" || processType === "cooling")) {
+    return { level: "aggressive", message: "Short integral time on a slow process — may cause windup or overshoot. Increase I time." };
+  }
+  // Pressure with high gain
+  if (pid.p > 6 && processType === "pressure") {
+    return { level: "caution", message: "Pressure loops are fast-acting — high gain can cause rapid oscillation. Start lower and increase." };
+  }
+  if (overshoot === "high") {
+    return { level: "caution", message: "Aggressive tuning selected — monitor closely during commissioning. Be ready to reduce P." };
+  }
+  return { level: "stable", message: "Parameters are within typical ranges for this loop type." };
 }
 
 // ----- Response Curve SVG -----
@@ -344,7 +377,7 @@ function ResponseCurve({
       <polyline
         points={points}
         fill="none"
-        stroke="#22c55e"
+        stroke="var(--primary)"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -445,6 +478,13 @@ export default function PIDCalculator() {
     [processType, overshoot, pid]
   );
 
+  const stabilityNote = useMemo(
+    () => getStabilityNote(pid, processType, overshoot),
+    [pid, processType, overshoot]
+  );
+
+  const pb = useMemo(() => gainToPB(pid.p), [pid.p]);
+
   function applyPreset(preset: Preset) {
     setProcessType(preset.processType);
     setResponseTime(preset.responseTime);
@@ -501,7 +541,7 @@ export default function PIDCalculator() {
 
         <div>
           <label htmlFor="responseTime" className="block text-sm font-medium mb-1.5">
-            Response Time (seconds)
+            Desired Response Time (sec)
           </label>
           <input
             id="responseTime"
@@ -510,7 +550,10 @@ export default function PIDCalculator() {
             max={600}
             value={responseTime}
             onChange={(e) => {
-              setResponseTime(Number(e.target.value));
+              const val = Number(e.target.value);
+              if (!isNaN(val)) {
+                setResponseTime(Math.max(5, Math.min(600, val)));
+              }
               setActivePreset(null);
             }}
             className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
@@ -543,59 +586,95 @@ export default function PIDCalculator() {
         {/* PID Values */}
         <div className="p-5 rounded-xl bg-[var(--card)] border border-[var(--border)]">
           <h2 className="text-sm font-medium text-[var(--muted-foreground)] mb-4 uppercase tracking-wide">
-            Recommended Values
+            Recommended Starting Values
           </h2>
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-3 gap-4 mb-3">
             <div className="text-center">
               <div className="text-3xl font-bold text-[var(--primary)]">{pid.p}</div>
               <div className="text-sm text-[var(--muted-foreground)] mt-1">
-                Proportional
+                Kp (Gain)
+              </div>
+              <div className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                PB = {pb}%
               </div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-[var(--primary)]">{pid.i}</div>
               <div className="text-sm text-[var(--muted-foreground)] mt-1">
-                Integral (s)
+                Ti (sec)
+              </div>
+              <div className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                Integral time
               </div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-[var(--primary)]">{pid.d}</div>
               <div className="text-sm text-[var(--muted-foreground)] mt-1">
-                Derivative (s)
+                Td (sec)
+              </div>
+              <div className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                Derivative time
               </div>
             </div>
           </div>
-          <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+
+          {/* Stability indicator */}
+          <div className={`text-xs px-3 py-2 rounded-md mb-3 ${
+            stabilityNote.level === "aggressive"
+              ? "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20"
+              : stabilityNote.level === "caution"
+              ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+          }`}>
+            {stabilityNote.message}
+          </div>
+
+          <p className="text-sm text-[var(--muted-foreground)] leading-relaxed mb-3">
             {explanation}
           </p>
+
+          {/* Platform note */}
+          <details className="text-xs text-[var(--muted-foreground)]">
+            <summary className="cursor-pointer hover:text-[var(--foreground)] font-medium">
+              How to apply these values
+            </summary>
+            <div className="mt-2 space-y-1.5 pl-3 border-l-2 border-[var(--border)]">
+              <p><span className="font-medium text-[var(--foreground)]">Siemens APOGEE/Desigo:</span> Use PB={pb}%, Ti={pid.i}s, Td={pid.d}s</p>
+              <p><span className="font-medium text-[var(--foreground)]">Tridium Niagara:</span> Use Kp={pid.p}, Ki={pid.i > 0 ? (Math.round(1/pid.i * 1000) / 1000) : 0}/s (1/Ti), Kd={pid.d}</p>
+              <p><span className="font-medium text-[var(--foreground)]">JCI Metasys:</span> Use Throttling Range={pb}%, Reset={pid.i}s</p>
+              <p className="italic mt-1">These are starting values. Always validate on the live system and adjust based on observed response.</p>
+            </div>
+          </details>
+
           <button
             onClick={() =>
               addEntry({
                 type: "pid",
-                title: `PID snapshot (${processType})`,
-                summary: `P=${pid.p}, I=${pid.i}s, D=${pid.d}s`,
+                title: `PID: ${activePreset || processType} loop`,
+                summary: `Kp=${pid.p} (PB=${pb}%), Ti=${pid.i}s, Td=${pid.d}s`,
                 source: "PID Loop Tuning",
                 fields: {
                   Process: processType,
                   "Response Time (s)": String(responseTime),
                   "Overshoot Tolerance": overshoot,
-                  P: String(pid.p),
-                  I: String(pid.i),
-                  D: String(pid.d),
+                  "Kp (Gain)": String(pid.p),
+                  "PB (%)": String(pb),
+                  "Ti (sec)": String(pid.i),
+                  "Td (sec)": String(pid.d),
                   Preset: activePreset ?? "Custom",
                 },
               })
             }
             className="mt-4 px-3 py-2 rounded-md text-sm font-medium border border-[var(--border)] hover:bg-[var(--accent)] min-h-11"
           >
-            Add PID snapshot to report
+            Add to report
           </button>
         </div>
 
         {/* Response Curve */}
         <div className="p-5 rounded-xl bg-[var(--card)] border border-[var(--border)]">
           <h2 className="text-sm font-medium text-[var(--muted-foreground)] mb-4 uppercase tracking-wide">
-            Expected Response
+            Predicted Step Response
           </h2>
           <ResponseCurve pid={pid} overshoot={overshoot} />
         </div>
