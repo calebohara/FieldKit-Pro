@@ -332,3 +332,153 @@ html.dark .ppcl-num { color: #fbbf24; }
 html.dark .ppcl-comment { color: #34d399; }
 html.dark .ppcl-linenum { color: #64748b; }
 html.dark .ppcl-ident { color: #67e8f9; }
+
+/* ── Mobile App Shell ── */
+/* Only applies below md breakpoint (< 768px) */
+
+@media (max-width: 767px) {
+  .mobile-app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex-shrink: 0;
+    background: var(--card);
+    /* subtle bottom shadow for depth */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  html.dark .mobile-header {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .mobile-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* offset for bottom nav: 72px bar + safe area */
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── Mobile Bottom Nav ── */
+
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--mobile-nav-bg);
+  border-top: 1px solid var(--mobile-nav-border);
+  box-shadow: var(--mobile-nav-shadow);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+}
+
+.mobile-bottom-nav-inner {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 0 4px;
+  height: 56px;
+}
+
+/* ── Tab Item ── */
+
+.mobile-tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 2px;
+  gap: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  text-decoration: none;
+  position: relative;
+  transition: transform 120ms ease;
+}
+.mobile-tab-item:active {
+  transform: scale(0.92);
+}
+
+/* Icon wrapper with active background */
+.mobile-tab-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+}
+
+.mobile-tab-active-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+/* Badge */
+.mobile-tab-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  z-index: 20;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--destructive);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ── More Sheet Items ── */
+
+.more-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  transition: background 150ms ease;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.more-sheet-item:active {
+  background: var(--accent);
+}
+.more-sheet-item[data-active] {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.more-sheet-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.more-sheet-icon-wrap[data-active] {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
