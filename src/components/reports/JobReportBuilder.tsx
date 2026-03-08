@@ -365,31 +365,47 @@ export default function JobReportBuilder() {
     <div className="space-y-6">
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4">
         <h2 className="text-lg font-semibold">Report Details</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input
-            value={meta.reportTitle}
-            onChange={(event) => updateMeta({ reportTitle: event.target.value })}
-            placeholder="Report title"
-            className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
-          />
-          <input
-            value={meta.siteName}
-            onChange={(event) => updateMeta({ siteName: event.target.value })}
-            placeholder="Site name"
-            className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
-          />
-          <input
-            value={meta.equipment}
-            onChange={(event) => updateMeta({ equipment: event.target.value })}
-            placeholder="Equipment tag / asset"
-            className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
-          />
-          <input
-            value={meta.technician}
-            onChange={(event) => updateMeta({ technician: event.target.value })}
-            placeholder="Technician name"
-            className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="report-title" className="block text-sm font-medium mb-1.5">Report title</label>
+            <input
+              id="report-title"
+              value={meta.reportTitle}
+              onChange={(event) => updateMeta({ reportTitle: event.target.value })}
+              placeholder="e.g., AHU-3 Startup Report"
+              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            />
+          </div>
+          <div>
+            <label htmlFor="site-name" className="block text-sm font-medium mb-1.5">Site name</label>
+            <input
+              id="site-name"
+              value={meta.siteName}
+              onChange={(event) => updateMeta({ siteName: event.target.value })}
+              placeholder="e.g., Building 400"
+              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            />
+          </div>
+          <div>
+            <label htmlFor="equipment" className="block text-sm font-medium mb-1.5">Equipment tag / asset</label>
+            <input
+              id="equipment"
+              value={meta.equipment}
+              onChange={(event) => updateMeta({ equipment: event.target.value })}
+              placeholder="e.g., AHU-3, VFD-12"
+              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            />
+          </div>
+          <div>
+            <label htmlFor="technician" className="block text-sm font-medium mb-1.5">Technician name</label>
+            <input
+              id="technician"
+              value={meta.technician}
+              onChange={(event) => updateMeta({ technician: event.target.value })}
+              placeholder="Your name"
+              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            />
+          </div>
         </div>
       </section>
 
@@ -397,47 +413,51 @@ export default function JobReportBuilder() {
         <h2 className="text-lg font-semibold">Add Findings</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Quick Note</label>
+            <label htmlFor="quick-note" className="text-sm font-medium">Quick Note</label>
             <textarea
+              id="quick-note"
               value={noteText}
               onChange={(event) => setNoteText(event.target.value)}
               rows={4}
               placeholder="Add observed behavior, root cause notes, or work performed."
-              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
+              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
             />
             <button
               onClick={handleAddNote}
-              className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--primary)] text-white min-h-11"
+              className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--primary)] text-[var(--primary-foreground)] min-h-11"
             >
               Add note
             </button>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Parameter Change</label>
+            <label htmlFor="param-id" className="text-sm font-medium">Parameter Change</label>
             <input
+              id="param-id"
               value={paramName}
               onChange={(event) => setParamName(event.target.value)}
               placeholder="Parameter ID (e.g., 01.07)"
-              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
+              className="w-full px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
             />
             <div className="grid grid-cols-2 gap-2">
               <input
                 value={oldValue}
                 onChange={(event) => setOldValue(event.target.value)}
                 placeholder="Old value"
-                className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
+                aria-label="Old value"
+                className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
               />
               <input
                 value={newValue}
                 onChange={(event) => setNewValue(event.target.value)}
                 placeholder="New value"
-                className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)]"
+                aria-label="New value"
+                className="px-3 py-2.5 rounded-md bg-[var(--input)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
               />
             </div>
             <button
               onClick={handleAddParameterChange}
-              className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--primary)] text-white min-h-11"
+              className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--primary)] text-[var(--primary-foreground)] min-h-11"
             >
               Add parameter change
             </button>
@@ -457,9 +477,10 @@ export default function JobReportBuilder() {
         </div>
 
         {entries.length === 0 && (
-          <p className="text-sm text-[var(--muted-foreground)]">
-            No findings captured yet. Add from tools or use the forms above.
-          </p>
+          <div className="rounded-lg border border-dashed border-[var(--border)] p-6 text-center">
+            <p className="text-sm font-medium text-[var(--muted-foreground)]">No findings captured yet</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-1">Add from tools or use the forms above.</p>
+          </div>
         )}
 
         {entries.map((entry) => (
@@ -507,7 +528,7 @@ export default function JobReportBuilder() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleExportPdf}
-            className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--primary)] text-white min-h-11"
+            className="px-3 py-2 rounded-md text-sm font-medium bg-[var(--primary)] text-[var(--primary-foreground)] min-h-11"
           >
             Export PDF
           </button>

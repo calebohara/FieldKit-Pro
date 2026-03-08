@@ -111,7 +111,7 @@ body {
     input[type="button"],
     input[type="submit"],
     input[type="reset"]
-  ) {
+  ):not([role="radio"]):not([data-no-lift]) {
     transition:
       transform 180ms ease,
       box-shadow 220ms ease,
@@ -128,7 +128,7 @@ body {
     input[type="button"],
     input[type="submit"],
     input[type="reset"]
-  ):hover {
+  ):not([role="radio"]):not([data-no-lift]):hover {
     transform: translateY(-1px);
   }
 
@@ -139,7 +139,7 @@ body {
     input[type="button"],
     input[type="submit"],
     input[type="reset"]
-  ):active {
+  ):not([role="radio"]):not([data-no-lift]):active {
     transform: translateY(0) scale(0.985);
   }
 }

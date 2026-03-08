@@ -537,7 +537,7 @@ function CantPingTab() {
           <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">{currentNode.fix}</p>
           <button
             onClick={handleReset}
-            className="mt-4 px-4 py-2 rounded-lg bg-[var(--primary)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            className="mt-4 px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-opacity"
           >
             Start Over
           </button>
@@ -961,7 +961,7 @@ export default function BACnetCalculator() {
             onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               tab === t
-                ? "bg-[var(--primary)] text-white"
+                ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                 : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]"
             }`}
           >

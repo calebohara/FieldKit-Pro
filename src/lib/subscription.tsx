@@ -171,7 +171,7 @@ export function PaidFeatureGate({
       </p>
       <a
         href="/dashboard/settings"
-        className="inline-block px-5 py-2.5 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity min-h-11"
+        className="inline-block px-5 py-2.5 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg font-medium hover:opacity-90 transition-opacity min-h-11"
       >
         Upgrade to Pro
       </a>

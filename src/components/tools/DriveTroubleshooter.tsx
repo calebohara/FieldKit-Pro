@@ -138,7 +138,7 @@ export default function DriveTroubleshooter() {
             onClick={() => setBrand("abb")}
             className={`px-4 py-2.5 rounded-lg border min-h-11 text-sm font-medium transition-colors ${
               brand === "abb"
-                ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                ? "bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]"
                 : "border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--accent)]"
             }`}
           >
@@ -148,7 +148,7 @@ export default function DriveTroubleshooter() {
             onClick={() => setBrand("yaskawa")}
             className={`px-4 py-2.5 rounded-lg border min-h-11 text-sm font-medium transition-colors ${
               brand === "yaskawa"
-                ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                ? "bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]"
                 : "border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--accent)]"
             }`}
           >
@@ -296,7 +296,7 @@ export default function DriveTroubleshooter() {
                     ? "/dashboard/drives/abb"
                     : "/dashboard/drives/yaskawa"
                 }
-                className="px-3 py-2 rounded-md bg-[var(--primary)] text-white text-sm font-medium min-h-11 inline-flex items-center"
+                className="px-3 py-2 rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium min-h-11 inline-flex items-center"
               >
                 Open full {brand.toUpperCase()} reference
               </Link>

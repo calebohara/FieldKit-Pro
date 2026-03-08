@@ -80,7 +80,7 @@ export default function RootLayout({
                   const key = 'fieldkit-theme';
                   const saved = localStorage.getItem(key);
                   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  const useDark = saved ? saved === 'dark' : prefersDark;
+                  const useDark = saved === 'dark' || (saved !== 'light' && prefersDark);
                   if (useDark) document.documentElement.classList.add('dark');
                   else document.documentElement.classList.remove('dark');
                 } catch {}

@@ -24,7 +24,7 @@ const features = [
     detail: "ACS580 / ACS880 coverage",
   },
   {
-    icon: "⚡",
+    icon: "🔌",
     title: "Yaskawa Drive Tools",
     description:
       "59 fault codes and 60 parameters for GA500/GA700 series. Searchable by code, name, or category.",
@@ -151,7 +151,10 @@ export default function LandingPage() {
                 <p className="text-[var(--muted-foreground)] mb-3 leading-relaxed">
                   {feature.description}
                 </p>
-                <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
+                <span
+                  className="inline-block text-xs font-medium px-2.5 py-1 rounded-full text-[var(--primary)]"
+                  style={{ background: "color-mix(in srgb, var(--primary) 12%, transparent)" }}
+                >
                   {feature.detail}
                 </span>
               </div>
@@ -200,17 +203,17 @@ export default function LandingPage() {
               your connection doesn&apos;t. Install it as an app on your phone
               for the best experience.
             </p>
-            <div className="flex items-center justify-center gap-6 text-sm text-[var(--muted-foreground)]">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-[var(--muted-foreground)]">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
                 iOS & Android
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
                 Add to Home Screen
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
                 No app store needed
               </span>
             </div>

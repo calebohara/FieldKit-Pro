@@ -34,16 +34,28 @@ export default function Header() {
         <ThemeToggle />
         <Link
           href="/dashboard/reports"
-          className="hidden sm:inline-flex px-3 py-1.5 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--accent)] transition-all duration-200"
+          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--accent)] transition-all duration-200"
         >
-          Reports ({entries.length})
+          Reports
+          {entries.length > 0 && (
+            <span
+              className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 text-xs font-medium rounded-full text-[var(--primary)]"
+              style={{ background: "color-mix(in srgb, var(--primary) 12%, transparent)" }}
+            >
+              {entries.length}
+            </span>
+          )}
         </Link>
         <button
           onClick={handleSignOut}
-          className="px-3 py-1.5 text-sm rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] transition-all duration-200"
+          className="px-2 py-1.5 text-sm rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] transition-all duration-200"
           aria-label="Sign out"
         >
-          <span className="sm:hidden">⎋</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:hidden" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
           <span className="hidden sm:inline">Sign out</span>
         </button>
       </div>

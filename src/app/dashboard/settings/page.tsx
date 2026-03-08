@@ -65,7 +65,7 @@ export default function SettingsPage() {
               </p>
               <button
                 disabled
-                className="w-full mt-2 px-4 py-2.5 bg-[var(--primary)] text-white rounded-lg text-sm font-medium opacity-40 cursor-not-allowed"
+                className="w-full mt-2 px-4 py-2.5 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg text-sm font-medium opacity-40 cursor-not-allowed"
               >
                 Upgrade to Pro — Coming Soon
               </button>

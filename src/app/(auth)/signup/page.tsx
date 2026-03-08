@@ -51,6 +51,14 @@ export default function SignupPage() {
       </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
+          <Link href="/" className="inline-flex items-center gap-2 mb-5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[var(--primary)]">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" />
+            </svg>
+            <span className="text-lg font-bold">
+              <span className="text-[var(--primary)]">FieldKit</span> Pro
+            </span>
+          </Link>
           <h1 className="text-2xl font-bold">Create your account</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-1">
             Start using FieldKit Pro for free
@@ -114,7 +122,9 @@ export default function SignupPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-[var(--destructive)]">{error}</p>
+            <div className="rounded-md border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2.5">
+              <p className="text-sm text-[var(--destructive)]">{error}</p>
+            </div>
           )}
 
           <button
