@@ -221,12 +221,19 @@ function buildPdf(
       doc.line(m, y + 2, pw - m, y + 2);
       y += 8;
 
+      // Helper: render multi-line text with per-line page breaks
+      function renderWrappedText(text: string, x: number, maxW: number, lineH: number) {
+        const wrappedLines: string[] = doc.splitTextToSize(text, maxW);
+        for (const line of wrappedLines) {
+          pageBreak(lineH + 1);
+          doc.text(line, x, y);
+          y += lineH;
+        }
+      }
+
       entries.forEach((entry, idx) => {
-        // Estimate height needed for this entry
-        const estimatedH = 18
-          + (entry.summary ? 8 : 0)
-          + (entry.fields ? Object.keys(entry.fields).length * 5 : 0);
-        pageBreak(Math.min(estimatedH, 40));
+        // Ensure at least the badge + first title line fit before a break
+        pageBreak(14);
 
         const colors = typeColors[entry.type] || typeColors.note;
 
@@ -241,15 +248,23 @@ function buildPdf(
         doc.setTextColor(...colors.text);
         doc.text(tag, m + 2, y - 0.5);
 
-        // ── Entry number right of badge
+        // ── Entry title (wraps with page breaks for very long titles)
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
         doc.setTextColor(...dark);
         const titleX = m + tagW + 3;
         const titleMaxW = cw - tagW - 3;
-        const entryTitleLines = doc.splitTextToSize(`${idx + 1}. ${entry.title}`, titleMaxW);
-        doc.text(entryTitleLines, titleX, y);
-        y += entryTitleLines.length * 4.5 + 1.5;
+        const entryTitleLines: string[] = doc.splitTextToSize(`${idx + 1}. ${entry.title}`, titleMaxW);
+        // First line on same row as badge
+        doc.text(entryTitleLines[0], titleX, y);
+        y += 4.5;
+        // Remaining title lines with page break safety
+        for (let i = 1; i < entryTitleLines.length; i++) {
+          pageBreak(5);
+          doc.text(entryTitleLines[i], titleX, y);
+          y += 4.5;
+        }
+        y += 1.5;
 
         // Timestamp + source
         doc.setFont("helvetica", "normal");
@@ -261,23 +276,16 @@ function buildPdf(
         y += 4.5;
 
         // Summary (skip if it duplicates the title)
-        const titleBase = entry.title.replace(/\.{3}$/, "");
-        const summaryDuplicatesTitle =
-          entry.summary === entry.title ||
-          (entry.title.endsWith("...") && entry.summary?.startsWith(titleBase));
-        if (entry.summary && !summaryDuplicatesTitle) {
-          pageBreak(8);
+        if (entry.summary && entry.summary !== entry.title) {
           doc.setFont("helvetica", "normal");
           doc.setFontSize(8.5);
           doc.setTextColor(...dark);
-          const lines = doc.splitTextToSize(entry.summary, cw - 4);
-          doc.text(lines, m + 4, y);
-          y += lines.length * 3.8 + 1.5;
+          renderWrappedText(entry.summary, m + 4, cw - 4, 3.8);
+          y += 1.5;
         }
 
         // Fields as key: value pairs
         if (entry.fields && Object.keys(entry.fields).length > 0) {
-          pageBreak(6);
           y += 1;
           for (const [key, value] of Object.entries(entry.fields)) {
             pageBreak(5);
@@ -289,9 +297,8 @@ function buildPdf(
             const lw = doc.getTextWidth(lbl);
             doc.setFont("helvetica", "normal");
             doc.setTextColor(...dark);
-            const vLines = doc.splitTextToSize(String(value), cw - 6 - lw);
-            doc.text(vLines, m + 4 + lw, y);
-            y += vLines.length * 3.5 + 1;
+            renderWrappedText(String(value), m + 4 + lw, cw - 6 - lw, 3.5);
+            y += 1;
           }
         }
 
@@ -443,8 +450,7 @@ export default function JobReportBuilder() {
     if (!trimmed) return;
     addEntry({
       type: "note",
-      title: trimmed.length > 72 ? `${trimmed.slice(0, 72)}...` : trimmed,
-      summary: trimmed,
+      title: trimmed,
       source: "Manual note",
     });
     setNoteText("");
@@ -685,18 +691,19 @@ export default function JobReportBuilder() {
         {entries.map((entry) => (
           <article
             key={entry.id}
-            className="rounded-lg border border-[var(--border)] p-4 space-y-2"
+            className="rounded-lg border border-[var(--border)] p-4 space-y-2 min-w-0"
+            style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                   {renderTypeLabel(entry.type)}
                 </p>
-                <h3 className="font-medium">{entry.title}</h3>
+                <h3 className="font-medium" style={{ whiteSpace: "pre-wrap" }}>{entry.title}</h3>
               </div>
               <button
                 onClick={() => removeEntry(entry.id)}
-                className="text-xs px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--accent)]"
+                className="text-xs px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--accent)] shrink-0"
               >
                 Remove
               </button>
@@ -706,12 +713,12 @@ export default function JobReportBuilder() {
               {entry.source ? ` • ${entry.source}` : ""}
             </p>
             {entry.summary && entry.summary !== entry.title && (
-              <p className="text-sm text-[var(--muted-foreground)]">{entry.summary}</p>
+              <p className="text-sm text-[var(--muted-foreground)]" style={{ whiteSpace: "pre-wrap" }}>{entry.summary}</p>
             )}
             {entry.fields && Object.keys(entry.fields).length > 0 && (
-              <div className="text-sm grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="text-sm grid grid-cols-1 md:grid-cols-2 gap-2 min-w-0">
                 {Object.entries(entry.fields).map(([key, value]) => (
-                  <p key={key} className="text-[var(--muted-foreground)]">
+                  <p key={key} className="text-[var(--muted-foreground)] min-w-0" style={{ overflowWrap: "anywhere" }}>
                     <span className="font-medium text-[var(--foreground)]">{key}:</span>{" "}
                     {value}
                   </p>
