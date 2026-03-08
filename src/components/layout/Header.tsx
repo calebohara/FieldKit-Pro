@@ -46,6 +46,26 @@ export default function Header() {
       {/* Controls */}
       <div className="ml-auto flex items-center gap-1.5">
         <ThemeToggle />
+        <button
+          onClick={() => router.refresh()}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] transition-all duration-200"
+          aria-label="Refresh page"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+        </button>
         <Link
           href="/dashboard/reports"
           className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--accent)] transition-all duration-200"
