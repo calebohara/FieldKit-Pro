@@ -21,7 +21,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex flex-col w-56 border-r border-[var(--border)] bg-[var(--card)] min-h-screen">
+    <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 md:z-30 flex-col w-56 border-r border-[var(--border)] bg-[var(--card)] h-screen overflow-y-auto">
       <div className="p-4 border-b border-[var(--border)]">
         <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[var(--primary)]">
