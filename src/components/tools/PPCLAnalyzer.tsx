@@ -34,37 +34,33 @@ function highlightCode(code: string): React.ReactNode {
   while ((match = pattern.exec(code)) !== null) {
     if (match.index > lastIndex) {
       parts.push(
-        <span key={`t${lastIndex}`} className="text-sky-300">
+        <span key={`t${lastIndex}`} className="ppcl-ident">
           {code.slice(lastIndex, match.index)}
         </span>
       );
     }
 
     if (match[1]) {
-      // Dotted operator (.EQ., .AND., etc.)
       parts.push(
-        <span key={`d${match.index}`} className="text-rose-400 font-semibold">
+        <span key={`d${match.index}`} className="ppcl-op font-semibold">
           {match[0]}
         </span>
       );
     } else if (match[2]) {
-      // Keyword/command
       parts.push(
-        <span key={`k${match.index}`} className="text-violet-400 font-semibold">
+        <span key={`k${match.index}`} className="ppcl-kw font-semibold">
           {match[0]}
         </span>
       );
     } else if (match[3]) {
-      // Number
       parts.push(
-        <span key={`n${match.index}`} className="text-amber-400">
+        <span key={`n${match.index}`} className="ppcl-num">
           {match[0]}
         </span>
       );
     } else if (match[4]) {
-      // Operator
       parts.push(
-        <span key={`o${match.index}`} className="text-rose-400">
+        <span key={`o${match.index}`} className="ppcl-op">
           {match[0]}
         </span>
       );
@@ -75,7 +71,7 @@ function highlightCode(code: string): React.ReactNode {
 
   if (lastIndex < code.length) {
     parts.push(
-      <span key={`r${lastIndex}`} className="text-sky-300">
+      <span key={`r${lastIndex}`} className="ppcl-ident">
         {code.slice(lastIndex)}
       </span>
     );
@@ -90,8 +86,8 @@ function highlightLine(line: string): React.ReactNode {
   if (commentMatch) {
     return (
       <>
-        <span className="text-[var(--muted-foreground)]">{commentMatch[1]}</span>
-        <span className="text-emerald-500 italic">{commentMatch[2]}</span>
+        <span className="ppcl-linenum">{commentMatch[1]}</span>
+        <span className="ppcl-comment italic">{commentMatch[2]}</span>
       </>
     );
   }
@@ -101,7 +97,7 @@ function highlightLine(line: string): React.ReactNode {
   if (lineNumMatch) {
     return (
       <>
-        <span className="text-[var(--muted-foreground)]">{lineNumMatch[1]}</span>
+        <span className="ppcl-linenum">{lineNumMatch[1]}</span>
         {lineNumMatch[2]}
         {highlightCode(lineNumMatch[3])}
       </>
@@ -114,9 +110,9 @@ function highlightLine(line: string): React.ReactNode {
 // ─── Severity Styling ────────────────────────────────────────
 
 const SEVERITY_CONFIG: Record<Severity, { bg: string; border: string; text: string; icon: string; label: string }> = {
-  error:   { bg: "bg-red-500/10",   border: "border-red-500/30",   text: "text-red-400",   icon: "⛔", label: "Error" },
-  warning: { bg: "bg-amber-500/10", border: "border-amber-500/30", text: "text-amber-400", icon: "⚠️", label: "Warning" },
-  info:    { bg: "bg-blue-500/10",  border: "border-blue-500/30",  text: "text-blue-400",  icon: "ℹ️", label: "Info" },
+  error:   { bg: "bg-red-500/10",   border: "border-red-500/30",   text: "text-red-700 dark:text-red-400",     icon: "⛔", label: "Error" },
+  warning: { bg: "bg-amber-500/10", border: "border-amber-500/30", text: "text-amber-700 dark:text-amber-400", icon: "⚠️", label: "Warning" },
+  info:    { bg: "bg-blue-500/10",  border: "border-blue-500/30",  text: "text-blue-700 dark:text-blue-400",   icon: "ℹ️", label: "Info" },
 };
 
 // ─── Sample Code ─────────────────────────────────────────────
@@ -142,6 +138,7 @@ const SAMPLE_CODE = `1000 C --- AHU-1 Supply Fan Control ---
 export default function PPCLAnalyzer() {
   const [code, setCode] = useState("");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
+  const [copyStatus, setCopyStatus] = useState("");
 
   const analysis: LintResult | null = useMemo(() => {
     if (!code.trim()) return null;
@@ -166,14 +163,36 @@ export default function PPCLAnalyzer() {
           <label htmlFor="ppcl-code" className="block text-sm font-medium">
             Paste your PPCL code
           </label>
-          {!code && (
+          <div className="flex items-center gap-2">
+            {code && (
+              <>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(code);
+                      setCopyStatus("Copied");
+                      setTimeout(() => setCopyStatus(""), 2000);
+                    } catch { setCopyStatus("Failed"); }
+                  }}
+                  className="text-xs px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+                >
+                  {copyStatus || "Copy"}
+                </button>
+                <button
+                  onClick={() => { setCode(""); setSeverityFilter("all"); setCopyStatus(""); }}
+                  className="text-xs px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+                >
+                  Clear
+                </button>
+              </>
+            )}
             <button
               onClick={() => setCode(SAMPLE_CODE)}
               className="text-xs text-[var(--primary)] hover:underline"
             >
               Load example
             </button>
-          )}
+          </div>
         </div>
         <textarea
           id="ppcl-code"
@@ -208,7 +227,7 @@ export default function PPCLAnalyzer() {
                 onClick={() => setSeverityFilter(severityFilter === "error" ? "all" : "error")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   severityFilter === "error" ? "bg-red-500/20 border-red-500/50" : "bg-red-500/10 border-red-500/30"
-                } border text-red-400`}
+                } border text-red-700 dark:text-red-400`}
               >
                 {errorCount} error{errorCount !== 1 ? "s" : ""}
               </button>
@@ -218,7 +237,7 @@ export default function PPCLAnalyzer() {
                 onClick={() => setSeverityFilter(severityFilter === "warning" ? "all" : "warning")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   severityFilter === "warning" ? "bg-amber-500/20 border-amber-500/50" : "bg-amber-500/10 border-amber-500/30"
-                } border text-amber-400`}
+                } border text-amber-700 dark:text-amber-400`}
               >
                 {warningCount} warning{warningCount !== 1 ? "s" : ""}
               </button>
@@ -228,14 +247,14 @@ export default function PPCLAnalyzer() {
                 onClick={() => setSeverityFilter(severityFilter === "info" ? "all" : "info")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   severityFilter === "info" ? "bg-blue-500/20 border-blue-500/50" : "bg-blue-500/10 border-blue-500/30"
-                } border text-blue-400`}
+                } border text-blue-700 dark:text-blue-400`}
               >
                 {infoCount} info
               </button>
             )}
             {analysis.issues.length === 0 && (
-              <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm">
-                All checks passed
+              <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-sm">
+                No issues found ({analysis.lineCount} lines checked, {Object.keys(RULE_DESCRIPTIONS).length} rules)
               </div>
             )}
           </div>
@@ -243,9 +262,9 @@ export default function PPCLAnalyzer() {
           {/* Syntax highlighted output */}
           <div>
             <h3 className="text-sm font-medium mb-2">Highlighted Code</h3>
-            <pre className="p-4 rounded-lg bg-[#0d1117] border border-[var(--border)] overflow-x-auto text-sm leading-6">
+            <pre className="ppcl-editor p-4 rounded-lg border border-[var(--border)] overflow-x-auto text-sm leading-6">
               {code.split("\n").map((line, idx) => (
-                <div key={idx} className="hover:bg-white/5 -mx-4 px-4">
+                <div key={idx} className="ppcl-line -mx-4 px-4">
                   <span className="select-none text-[var(--muted-foreground)] mr-4 inline-block w-6 text-right text-xs">
                     {idx + 1}
                   </span>

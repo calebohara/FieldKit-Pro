@@ -305,3 +305,30 @@ body {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+/* ── PPCL Syntax Highlighting ── */
+
+.ppcl-editor {
+  background: #f8fafc;
+  color: #1e293b;
+}
+html.dark .ppcl-editor {
+  background: #0d1117;
+  color: #e2e8f0;
+}
+.ppcl-line:hover { background: rgba(0, 0, 0, 0.03); }
+html.dark .ppcl-line:hover { background: rgba(255, 255, 255, 0.03); }
+
+.ppcl-kw  { color: #7c3aed; }
+.ppcl-op  { color: #e11d48; }
+.ppcl-num { color: #d97706; }
+.ppcl-comment { color: #16a34a; }
+.ppcl-linenum { color: #94a3b8; }
+.ppcl-ident { color: #0891b2; }
+
+html.dark .ppcl-kw  { color: #a78bfa; }
+html.dark .ppcl-op  { color: #fb7185; }
+html.dark .ppcl-num { color: #fbbf24; }
+html.dark .ppcl-comment { color: #34d399; }
+html.dark .ppcl-linenum { color: #64748b; }
+html.dark .ppcl-ident { color: #67e8f9; }

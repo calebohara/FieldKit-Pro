@@ -501,6 +501,164 @@ function ruleActDeactTargets(parsed: ParsedLine[], issues: LintIssue[]) {
   }
 }
 
+function ruleGotoTargets(parsed: ParsedLine[], issues: LintIssue[]) {
+  const ppclLines = new Set<number>();
+  for (const p of parsed) {
+    if (p.ppclLineNum !== null) ppclLines.add(p.ppclLineNum);
+  }
+
+  for (const p of parsed) {
+    if (p.isEmpty || p.isComment || p.ppclLineNum === null) continue;
+    const upper = p.content.toUpperCase();
+    const gotoMatch = upper.match(/\bGOTO\s+(\d+)\b/);
+    if (gotoMatch) {
+      const target = parseInt(gotoMatch[1], 10);
+      if (!ppclLines.has(target)) {
+        issues.push({
+          line: p.editorLine,
+          ppclLine: p.ppclLineNum,
+          severity: "error",
+          rule: "S003",
+          message: `GOTO target line ${target} does not exist in program`,
+        });
+      }
+    }
+  }
+}
+
+function ruleParenthesesBalance(parsed: ParsedLine[], issues: LintIssue[]) {
+  for (const p of parsed) {
+    if (p.isEmpty || p.isComment) continue;
+    let depth = 0;
+    for (const ch of p.content) {
+      if (ch === "(") depth++;
+      if (ch === ")") depth--;
+      if (depth < 0) break;
+    }
+    if (depth !== 0) {
+      issues.push({
+        line: p.editorLine,
+        ppclLine: p.ppclLineNum ?? undefined,
+        severity: "error",
+        rule: "S005",
+        message: depth > 0
+          ? `Unclosed parenthesis — ${depth} opening '(' without matching ')'`
+          : `Extra closing ')' without matching '('`,
+      });
+    }
+  }
+}
+
+function ruleIfThenStructure(parsed: ParsedLine[], issues: LintIssue[]) {
+  for (const p of parsed) {
+    if (p.isEmpty || p.isComment) continue;
+    const upper = p.content.toUpperCase();
+
+    // IF without THEN (and not a continuation line)
+    if (/\bIF\b/.test(upper) && !/\bTHEN\b/.test(upper) && !p.isContinuation) {
+      // Check if next non-empty line is a continuation
+      // Simple check: flag it as warning
+      issues.push({
+        line: p.editorLine,
+        ppclLine: p.ppclLineNum ?? undefined,
+        severity: "warning",
+        rule: "S006",
+        message: "IF statement without THEN on same line — verify continuation or add THEN clause",
+      });
+    }
+
+    // THEN with nothing after it (empty body)
+    if (/\bTHEN\s*$/.test(upper) && !p.isContinuation) {
+      issues.push({
+        line: p.editorLine,
+        ppclLine: p.ppclLineNum ?? undefined,
+        severity: "warning",
+        rule: "S007",
+        message: "THEN clause is empty — missing command after THEN",
+      });
+    }
+  }
+}
+
+/** Detect lines that start with a word that is not a known PPCL command or keyword */
+function ruleUnknownCommand(parsed: ParsedLine[], issues: LintIssue[]) {
+  const knownStarters = new Set<string>([
+    ...PPCL_COMMANDS,
+    ...PPCL_KEYWORDS,
+    "C",   // comment marker
+  ]);
+
+  for (const p of parsed) {
+    if (p.isEmpty || p.isComment || p.ppclLineNum === null) continue;
+    const content = p.content.trim();
+    // Get first word of the content (the statement keyword)
+    const firstWordMatch = content.match(/^([A-Z$@][A-Z0-9]*)\b/i);
+    if (!firstWordMatch) continue;
+    const firstWord = firstWordMatch[1].toUpperCase();
+
+    // Skip if it's a known command/keyword
+    if (knownStarters.has(firstWord)) continue;
+    // Skip if it looks like an assignment (point = value)
+    if (/^[A-Z$@][A-Z0-9_\-]*\s*=/i.test(content)) continue;
+    // Skip ELSE at start (it's in PPCL_KEYWORDS already but check)
+    if (firstWord === "ELSE") continue;
+
+    issues.push({
+      line: p.editorLine,
+      ppclLine: p.ppclLineNum,
+      severity: "warning",
+      rule: "S008",
+      message: `Statement starts with '${firstWord}' which is not a recognized PPCL command`,
+    });
+  }
+}
+
+function ruleOnpwrtPlacement(parsed: ParsedLine[], issues: LintIssue[]) {
+  let firstCodeLine: ParsedLine | null = null;
+  let onpwrtLine: ParsedLine | null = null;
+
+  for (const p of parsed) {
+    if (p.isEmpty || p.isComment || p.ppclLineNum === null) continue;
+    if (!firstCodeLine) firstCodeLine = p;
+    if (/\bONPWRT\b/i.test(p.content) && !onpwrtLine) {
+      onpwrtLine = p;
+    }
+  }
+
+  if (onpwrtLine && firstCodeLine && onpwrtLine.editorLine !== firstCodeLine.editorLine) {
+    issues.push({
+      line: onpwrtLine.editorLine,
+      ppclLine: onpwrtLine.ppclLineNum ?? undefined,
+      severity: "info",
+      rule: "D007",
+      message: "ONPWRT should typically be the first executable statement in a PPCL program",
+    });
+  }
+}
+
+function ruleContinuationLine(parsed: ParsedLine[], issues: LintIssue[]) {
+  for (let i = 0; i < parsed.length; i++) {
+    const p = parsed[i];
+    if (p.isEmpty || p.isComment) continue;
+    if (!p.isContinuation) continue;
+
+    // Check if there is a next non-empty line
+    let hasNext = false;
+    for (let j = i + 1; j < parsed.length; j++) {
+      if (!parsed[j].isEmpty) { hasNext = true; break; }
+    }
+    if (!hasNext) {
+      issues.push({
+        line: p.editorLine,
+        ppclLine: p.ppclLineNum ?? undefined,
+        severity: "error",
+        rule: "S009",
+        message: "Line ends with continuation '&' but there is no following line",
+      });
+    }
+  }
+}
+
 // ─── Point Extraction ────────────────────────────────────────
 
 function extractPoints(parsed: ParsedLine[]): string[] {
@@ -548,7 +706,13 @@ export function lintPPCL(code: string): LintResult {
   ruleGotoDirection(parsed, issues);
   ruleComplexSingleLine(parsed, issues);
   ruleGosubReturn(parsed, issues);
+  ruleGotoTargets(parsed, issues);
   ruleActDeactTargets(parsed, issues);
+  ruleParenthesesBalance(parsed, issues);
+  ruleIfThenStructure(parsed, issues);
+  ruleUnknownCommand(parsed, issues);
+  ruleOnpwrtPlacement(parsed, issues);
+  ruleContinuationLine(parsed, issues);
   ruleTimeBased(parsed, issues);
 
   // Sort by editor line, then severity (error > warning > info)
@@ -583,5 +747,12 @@ export const RULE_DESCRIPTIONS: Record<string, { name: string; category: string 
   D006: { name: "Dense THEN/ELSE chain", category: "Design Guidelines" },
   S001: { name: "GOSUB target missing", category: "Subroutines" },
   S002: { name: "Missing RETURN", category: "Subroutines" },
+  S003: { name: "GOTO target missing", category: "Program Flow" },
   S004: { name: "Target line missing", category: "Subroutines" },
+  S005: { name: "Unbalanced parentheses", category: "Syntax" },
+  S006: { name: "IF without THEN", category: "Syntax" },
+  S007: { name: "Empty THEN clause", category: "Syntax" },
+  S008: { name: "Unknown command", category: "Syntax" },
+  S009: { name: "Dangling continuation", category: "Syntax" },
+  D007: { name: "ONPWRT placement", category: "Design Guidelines" },
 };
