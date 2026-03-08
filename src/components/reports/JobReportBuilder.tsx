@@ -50,7 +50,7 @@ function buildTextReport(
     lines.push(`${idx + 1}. ${renderTypeLabel(entry.type)} - ${entry.title}`);
     lines.push(`   Time: ${formatTimestamp(entry.createdAt)}`);
     if (entry.source) lines.push(`   Source: ${entry.source}`);
-    if (entry.summary) lines.push(`   Summary: ${entry.summary}`);
+    if (entry.summary && entry.summary !== entry.title) lines.push(`   Summary: ${entry.summary}`);
     if (entry.fields && Object.keys(entry.fields).length > 0) {
       lines.push("   Details:");
       Object.entries(entry.fields).forEach(([key, value]) => {
@@ -260,8 +260,12 @@ function buildPdf(
         doc.text(subline, m + 4, y);
         y += 4.5;
 
-        // Summary
-        if (entry.summary) {
+        // Summary (skip if it duplicates the title)
+        const titleBase = entry.title.replace(/\.{3}$/, "");
+        const summaryDuplicatesTitle =
+          entry.summary === entry.title ||
+          (entry.title.endsWith("...") && entry.summary?.startsWith(titleBase));
+        if (entry.summary && !summaryDuplicatesTitle) {
           pageBreak(8);
           doc.setFont("helvetica", "normal");
           doc.setFontSize(8.5);
@@ -701,7 +705,7 @@ export default function JobReportBuilder() {
               {formatTimestamp(entry.createdAt)}
               {entry.source ? ` • ${entry.source}` : ""}
             </p>
-            {entry.summary && (
+            {entry.summary && entry.summary !== entry.title && (
               <p className="text-sm text-[var(--muted-foreground)]">{entry.summary}</p>
             )}
             {entry.fields && Object.keys(entry.fields).length > 0 && (
